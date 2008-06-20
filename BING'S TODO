@@ -1,0 +1,31 @@
+BING'S TODO, in no particular order:
+1. Add password support
+2. Add UDP support for network notifications
+  a. read up on ruby-growl (network Growl notifications even from non-Mac computers)
+  b. read through socket (crazy-ass network stuff)
+3. Research click callbacks
+  a. read about Cocoa delegates
+  b. see if you have to set a delegate up to catch the click
+4. Research extracting the application icon through RubyCocoa given an application's name
+5. Draw up a default application icon for RubyGrowler
+6. Ditch the command-line wrapper and go purely with Cocoa bindings
+7. Make overrides prettier for post_using_cocoa
+8. Until CLI is ditched, add support for overrides in post_using_cli
+9. Find out why notifications are given names
+  a. can you store default notifications?
+  b. could you implement something like Growl.notify(notification_name) to send pre-existing notification by name?
+    - store Growl object in all_notifications instead of just the names
+    - when you call Growl.register! collect the names of all_notifications
+    - add this to Growl class:
+      def self.notify(name)
+        @all_notifications[notification_names.index(name)].post
+      end
+      alias :notify_by_name :notify
+      
+      def self.notification_names
+        @all_notifications.collect {|notification| notification[:name]}
+      end
+  c. can you script default display styles?
+    - probably not
+10. Add #broadcast functionality (after networking is set up)
+11. Look up the *jours and see what Bonjour can do for you, if anything
