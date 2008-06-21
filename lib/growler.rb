@@ -1,339 +1,198 @@
-require 'osx/cocoa'
-require 'yaml'
-require 'fileutils'
-
 module Growl
-  class GrowlApplicationError < StandardError
-  end
+  # For simple scripts it's easier to just send one-off notifications without going through the
+  # rigmarole of setting configuration and registering the application. For the times when that
+  # would be overkill, the +Growl+ module itself can be used to send simple notifications.
+  #
+  # Unlike +Growl::Notification+, which taps into the Cocoa bindings for Growl, the +Growl+
+  # module simply wraps the +growlnotify+ command-line utility. You might find that this is
+  # more convenient and powerful, since it's simple and has a much easier time with custom
+  # notification icons.
+  #
+  # To use, set your messages attributes on the +Growl+ module directly, using about the same
+  # syntax and attribute names as you would for a +Growl::Notification+, then call +Growl.post+
+  # to post the message. 
+  #
+  # Some things to be aware of:
+  #   1. You can set the name of the application the +Growl+ module posts as, but the notification
+  #   won't show up unless that application has already been registered. The default application
+  #   name is "growlnotify", so change those settings to alter how the +Growl+ module's
+  #   notifications appear. The same holds true for notification names.
+  #   2. You cannot register the +Growl+ module as an application. However, by setting the
+  #   application name of the +Growl+ module (+Growl[:name] = name+) to that of an already-
+  #   registered application (either one you made using Growler or one from somewhere else),
+  #   the notifications send by the module will inherit the settings for that application as
+  #   defined in the Growl preference pane.
+  #   3. There is a bug in Leopard (still persists in Leopard 10.5.3 and Growl 1.1.4) that
+  #   causes many messages sent by +growlnotify+ to be ignored. The workaround for this
+  #   is to send network notifications to localhost. The +Growl+ module does this hack automatically;
+  #   however, you must check "Listen for incoming notifications" under the "Network" tab in
+  #   the Growl preference pane for these notifications to show up.
+  #   4. None of the attributes on the +Growl+ module will affect anything concerning +Application+
+  #   or +Notification+ objects (unlike how +Notifications+ default to inheriting certain
+  #   attributes from their parent +Application+). Think of the module as just holding a
+  #   single-shot notification.
+  #
+  # Currently, setting +:udp+, +:auth+, +:crypt+, +:port+, +:progress+ or +:wait+ does nothing.
+  # Network functionality is planned for a later release, but the value of supporting +:wait+
+  # at all is debateable. Currently, I have absolutely no clue what 'progress' is supposed to do.
   
-  class GrowlMessageError < StandardError
-  end
-end
+  PRIORITIES = {:very_low => -2, :low => -1, :normal => 0, :high => 1, :very_high => 2}
+  ATTR_NAMES = [:message, :title, :sticky, :icon, :password, :host, :name, :path, :app_name, :app_icon, :icon_path, :image, :priority, :udp, :auth, :crypt, :wait, :port, :progress]
+  attr_accessor :message, :title, :sticky, :icon, :password, :host, :name, :path, :app_name, :udp, :auth, :crypt, :wait, :port, :progress
+  attr_reader   :app_icon, :icon_path, :image, :priority
+  alias :msg :message
+  @host = "localhost"
+  @path = "/usr/local/bin/growlnotify"
 
-class Growl
-  PROTECTED_CATTRS = [:frozen]
-
-  # Whereby 'cattr', I mean an instance variable (attribute) on the class instance, not
-  # actually a class variable (class attribute).
-  def self.[](cattr)
-    self.instance_variable_get :"@#{cattr}"
+  # Setter for +@app_icon+. Automatically appends ".app" to the name given (unless the name
+  # already ends in ".app") to retain compatibility with Growl versions < 1.1.4.
+  def self.app_icon=(name)
+    @app_icon = self.app_icon_for(name)
   end
   
-  def self.[]=(cattr, value)
-    self.instance_variable_set(:"@#{cattr}", value) unless PROTECTED_CATTRS.include?(cattr)
+  # Setter for +@icon_path+. Automatically expands the path given.
+  # Remember, Growl will use the _icon_ of the file that you point to; if you set +icon_path+
+  # to point to an image file, Growl will show the image file's icon, and not the image itself.
+  def self.icon_path=(path)
+    @icon_path = File.expand_path(path)
   end
   
-  def initialize(message = "", options = {})
-    defaults = {:host => Growl[:host], :message => message, :priority => 0}
-    options = defaults.merge(options)
-    Growl.add_notification(options[:name])
-    set_attributes(options)
+  # Setter for +@image+. Automatically expands the path given.
+  def self.image=(path)
+    @image = File.expand_path(path)
   end
-    
+  
+  # Setter for +@priority+. Accepts integers between -2 and 2 or priority names as symbols (e.g.
+  # :very_low, :low, :normal, :high, :very_high).
+  def self.priority=(value)
+    @priority = self.priority_for(value)
+  end
+  
   # Catch-all attribute reader.
-  def [](attribute)
+  def self.[](attribute)
     self.instance_variable_get :"@#{attribute}"
   end
   
-  # Catch-all attribute setter.
-  def []=(attribute, value)
-    self.instance_variable_set :"@#{attribute}", transmogrify(attribute, value)
+  # Catch-all attribute setter. Massages data just like described in other setters (for example,
+  # automatically appends ".app" to the name when setting +Growl[:app_icon]+).
+  def self.[]=(attribute, value)
+    self.instance_variable_set(:"@#{attribute}", transmogrify(attribute, value)) if ATTR_NAMES.include?(attribute)
   end
 
-  # Mass attribute reader. Returns attributes as a hash.
-  def get_attributes
-    attrs = {}
-    ATTR_NAMES.each do |key|
-      attrs[key] = self[key]
+  # Returns a hash of the current settings.
+  def self.get_defaults
+    attributes = {}
+    ATTR_NAMES.each do |attribute|
+      attributes[attribute] = self[attribute]
     end
-    attrs      
+    return attributes
   end
-  
-  # Mass attribute setter. Pass attributes as a hash; returns the new attribute hash.
-  def set_attributes(attrs = {})
+
+  # Mass attribute setter. Pass attributes as a hash; returns self. Ignores any keys that aren't
+  # a usable attribute.
+  def self.set_defaults!(attrs = {})
     attrs.each do |key, value|
-      self[key] = value
+      self[key] = value if ATTR_NAMES.include?(key)
     end
-    get_attributes
-  end
-
-  def message(message)
-    @message = message
-    self
-  end
-  alias :msg :message
-  
-  def title(title)
-    @title = title
-    self
-  end
-  
-  def sticky(sticky)
-    @sticky = sticky
-    self
-  end
-  
-  def icon(icon)
-    @icon = icon
-    self
-  end
-  
-  def icon_path(path)
-    @icon_path = File.expand_path(path)
-    self
-  end
-  
-  def priority(value)
-    @priority = value.to_priority
-    self
-  end
-  alias :pri :priority
-  
-  def app_icon(app_name)
-    @app_icon = app_name.to_app_name
-    self
-  end
-  
-  def image(path)
-    @image = File.expand_path(path)
     self
   end
 
-  def password(pwd)
-    @password = pwd if pwd
-    self
-  end
-  
-  def host(host)
-    @host = host
-    self
-  end
-  
-  def name(name)
-    @name = name
-    self
-  end
-  
-  def sticky?
-    @sticky
-  end
-  
-  def post(overrides = {})
-    # cli_only_attrs? ? post_using_cli : post_using_cocoa
-    post_using_cocoa(overrides)
+  # Posts a notification based on the current module settings.
+  # Pass a hash of override attributes to alter the notification being posted without changing
+  # any attributes on the module.
+  #
+  # Calls +growlnotify+ using +%x[]+, so returns STDOUT from the shell. If there are no glaring
+  # errors in syntax, usually returns "". However, a return value of "" is no guarantee that
+  # the message actually showed up on the screen. If notifications aren't showing up, read the
+  # notes about "things to be aware of" at the top and see if those fix the problem.
+  #
+  # Aliased as +notify+.
+  def self.post(overrides = {})
+    %x[#{@path} #{self.build_message_string(overrides)}]
   end
   alias :notify :post
 
-  def stick(overrides = {})
-    # cli_only_attrs? ? stick_using_cli : stick_using_cocoa
-    stick_using_cocoa(overrides)
+  # Just like +post+ with automatic :sticky => true.
+  #
+  # Aliased as +stick+.
+  def self.pin(overrides = {})
+    post(overrides.merge(:sticky => true))
   end
-  # For those of us who think 'stick' is too close to 'sticky'
-  alias :pin :stick
+  alias :stick :pin 
   
   # Sends the same message to each of the hosts specified.
   # Send hosts and passwords as arrays.
-  # Example @growl.broadcast(["some.host", "pass"], ["some.other.host", "word"])
-  def broadcast(*hosts)
-    original_host = self[:host]
-    orginal_password = self[:password]
-    hosts.each {|*host| self.host(host[0]).password(host[1]).post}
-    self[:host] = original_host
-    self[:password] = orginal_password
+  # Example Growl.broadcast(["some.host", "pass"], ["some.other.host", "word"], ...)
+  def self.broadcast(*hosts)
+    hosts.each {|*host| self.post(:host => host[0], :password => host[1])}
   end
 
-  HERE = File.dirname(File.expand_path(__FILE__))
-  PRIORITIES = {:very_low => -2, :low => -1, :regular => 0, :high => 1, :very_high => 2}
-  DEFAULT_NOTIFICATION = Growl.new("Growler seeks your attention.", :name => "Growler Notification")
-  NOTIFICATION_CENTER = OSX::NSDistributedNotificationCenter.defaultCenter
-  FROZEN_ATTRIBUTES_PATH = File.join(HERE, "resources", "growl_attributes.yaml")
-  # The names of the different (instance) attributes on the Growl class.
-  CATTR_NAMES = [:name, :path, :host, :icon, :all_notifications, :default_notifications, :registered]
-  # The names of the different attributes on Growl instances.
-  ATTR_NAMES = [:message, :title, :sticky, :icon, :icon_path, :priority, :app_icon, :image]
-  DEFAULT_ATTRIBUTES = {:name => "Growler",
-                        :path => "/usr/local/bin/growlnotify",
-                        :host => "localhost",
-                        :icon => OSX::NSData.data,
-                        :all_notifications => [DEFAULT_NOTIFICATION],
-                        :default_notifications => [DEFAULT_NOTIFICATION],
-                        :registered => false}
-  @frozen = File.exist?(FROZEN_ATTRIBUTES_PATH)
-
-  def self.post(notification_name, overrides = {})
-    
-  end
-
-  def self.frozen?
-    @frozen
-  end
-
-  def self.load_attributes_from_default_or_frozen_file
-    if frozen?
-      return File.open(FROZEN_ATTRIBUTES_PATH) {|file| YAML.load(file)}
-    else
-      return DEFAULT_ATTRIBUTES
-    end
-  end
-
-  GROWL_ATTRIBUTES = load_attributes_from_default_or_frozen_file
-  
-  def self.registered?
-    @registered
-  end
-
-  def self.register!
-    cocoa_registration_data = {"ApplicationName" => @name,
-                               "AllNotifications" => OSX::NSArray.arrayWithArray(@all_notifications.collect(&:name)),
-                               "DefaultNotifications" => OSX::NSArray.arrayWithArray(@default_notifications.collect(&:name)),
-                               "ApplicationIcon" => @icon}
-    attrs = OSX::NSDictionary.dictionaryWithDictionary(cocoa_registration_data)
-    name = "GrowlApplicationRegistrationNotification"
-    NOTIFICATION_CENTER.postNotificationName_object_userInfo_deliverImmediately(name, nil, attrs, true)
-    @registered = true
-  end
-  
-  # Freezes the changes you made to the attributes on the Growl class.
-  # Writes them to a YAML file within the directory structure.
-  def self.freeze_attributes!
-    attrs = {:name => @name,
-             :path => @path,
-             :host => @host,
-             :icon => @icon,
-             :all_notifications => @all_notifications,
-             :default_notifications => @default_notifications,
-             :registered => @registered}
-    File.open(FROZEN_ATTRIBUTES_PATH, File::WRONLY|File::TRUNC|File::CREAT, 0777) { |file| file.puts(attrs.to_yaml) }
-    @frozen = true
-  end
-  
-  # Returns false if successful. Something to watch out for.
-  def self.unfreeze_attributes!
-    FileUtils.rm(FROZEN_ATTRIBUTES_PATH)
-    @frozen = false
-  end
-  
-  def self.all_notifications
-    @all_notifications
-  end
-  
-  def self.default_notifications
-    @default_notifications
-  end
-  
-  def self.add_notification(name)
-    unless @all_notifications.include?(name)
-      @all_notifications << name
-      @default_notifications << name
-    end
-  end
-  
-  def self.remove_notification(name)
-    @all_notifications.delete(name)
-  end
-  
-  def self.enable_notification(name)
-    if @all_notifications.include?(name) && !@default_notifications.include?(name)
-      @default_notifications << name
-    end
-  end
-  
-  def self.disable_notification(name)
-    @enabled_notifications_list.delete(name)
-  end
-  
-  def self.set_defaults!(defaults = {})
-    CATTR_NAMES.each do |key|
-      self[key] = defaults[key] if defaults.has_key?(key)
-    end
-    check_for_missing_attrs
-  end
-  
-  def self.restore_defaults!
-    set_defaults!(DEFAULT_ATTRIBUTES)
-  end
-  
-  def self.check_for_missing_attrs
-    missing_attrs = CATTR_NAMES.collect {|name| name if self.instance_variable_get(:"@#{name}").nil?}.compact
-    if missing_attrs.empty?
-      return true
-    else
-      raise GrowlerInitilizationError, "Missing required attributes! (#{missing_attrs.join(", ")})"
-    end    
-  end
-  
-  # The show-stopper. Sets the Growl class defaults either from a YAML file or from the provided
-  # hardcoded defaults. Allow some semblance of persistence until Maglev becomes a reality, I guess...
-  self.set_defaults!(GROWL_ATTRIBUTES)
 
   protected
-  
+
+  # Appends ".app" to the application name if it isn't already there. This is no longer
+  # necessary with Growl >= 1.1.4, but adding it doesn't hurt and allows compatibility
+  # with earlier versions.
   def self.app_name_for(name)
     name =~ /.*\.app$/ ? name : name + ".app"    
   end
   
+  # Converts priority symbol names to integers. Returns 0 if the name isn't found.
   def self.priority_for(sym)
-    Growl::PRIORITIES[sym] || 0
+    PRIORITIES[sym] || 0
   end
   
   # Intelligently transforms simple inputs for :app_icon, :image, and :priority
   # into what growlnotify expects.
-  def transmogrify(attribute, value)
+  def self.transmogrify(attribute, value)
     return case attribute
     when :app_icon
-      Growl.app_name_for(value)
+      self.app_name_for(value)
     when :icon_path
       value ? File.expand_path(value) : nil
     when :image
       value ? File.expand_path(value) : nil
     when :priority
-      value.is_a?(Numeric) ? value : Growl.priority_for(value)
+      value.is_a?(Numeric) ? value : self.priority_for(value)
     else
       value
     end
   end
   
-  def build_message_string      
+  # Builds the actual command string that is passed to +growlnotify+.
+  def self.build_message_string(overrides = {})
+    # default_sticky    = overrides[:sticky]    || @sticky
+    # default_app_name  = overrides[:app_name]  || @app_name
+    # default_name      = overrides[:name]      || @name
+    # default_message   = overrides[:message]   || overrides[:msg]    || @message
+    # default_icon      = overrides[:icon]      || @icon
+    # default_icon_path = overrides[:icon_path] || @icon_path
+    # default_image     = overrides[:image]     || @image
+    # default_app_icon  = overrides[:app_icon]  || @app_icon
+    # default_priority  = overrides[:priority]  || @priority
+    # default_host      = overrides[:host]      || @host
+    # default_title     = overrides[:title]     || @title
+    
+    options = self.get_defaults.merge(overrides)
+
     str = []
-    str << "-s"                   if sticky?
-    str << "-n '#{Growl[:name]}'" if Growl[:name]
-    str << "-d '#{@name}'"        if @name
-    str << "-m '#{@message}'"
-    str << "-i '#{@icon}'"        if @icon
-    str << "-I '#{@icon_path}'"   if @icon_path
-    str << "--image '#{@image}'"  if @image
-    str << "-a '#{@app_icon}'"    if @app_icon
-    str << "-p #{@priority}"      if @priority
-    str << "-H #{@host}"          if @host
-    str << "-t '#{@title}'"       if @title
+    str << "-s"                            if options[:sticky]
+    str << "-n '#{options[:app_name]}'"    if options[:app_name]
+    str << "-d '#{options[:name]}'"        if options[:name]
+    str << "-m '#{options[:message]}'"
+    str << "-i '#{options[:icon]}'"        if options[:icon]
+    str << "-I '#{options[:icon_path]}'"   if options[:icon_path]
+    str << "--image '#{options[:image]}'"  if options[:image]
+    str << "-a '#{options[:app_icon]}'"    if options[:app_icon]
+    str << "-p #{options[:priority]}"      if options[:priority]
+    str << "-H #{options[:host]}"          if options[:host]
+    str << "-t '#{options[:title]}'"       if options[:title]
     str.join(" ")
   end
- 
-  def cli_only_attrs?
-    @icon or @icon_path or @image or @app_icon
+
+  class GrowlApplicationError < StandardError
   end
   
-  def post_using_cli
-    %x[#{Growl[:path]} #{self.build_message_string}]
-  end
-  
-  def post_using_cocoa(overrides = {})
-    cocoa_notification_data = {"NotificationName" => (@name || Growl::DEFAULT_NOTIFICATION[:name]),
-                               "ApplicationName" => Growl[:name],
-                               "NotificationTitle" => (@title || ""),
-                               "NotificationDescription" => @message,
-                               "NotificationIcon" => (@icon || Growl[:icon]),
-                               "NotificationSticky" => OSX::NSNumber.numberWithBool(@sticky),
-                               "NotificationPriority" => OSX::NSNumber.numberWithInt(@priority)}
-    attrs = OSX::NSDictionary.dictionaryWithDictionary(cocoa_notification_data.merge(overrides))
-    NOTIFICATION_CENTER.postNotificationName_object_userInfo_deliverImmediately("GrowlNotification", nil, attrs, true)
-  end
-  
-  def stick_using_cli
-    sticky? ? post_using_cli : %x[#{Growl[:path]} -s #{self.build_message_string}]
-  end
-  
-  def stick_using_cocoa(overrides = {})
-    post_using_cocoa(overrides.merge({"NotificationSticky" => OSX::NSNumber.numberWithBool(true)}))
+  class GrowlMessageError < StandardError
   end
 end

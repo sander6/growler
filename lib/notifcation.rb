@@ -2,7 +2,6 @@ require 'osx/cocoa'
 
 module Growl  
   class Notification
-    PRIORITIES = {:very_low => -2, :low => -1, :normal => 0, :high => 1, :very_high => 2}
     ATTRIBUTES = [:name, :app_name, :title, :message, :icon, :sticky, :priority, :parent_application]
     attr_reader ATTRIBUTES
     alias :sticky? :sticky
@@ -148,7 +147,7 @@ module Growl
       when :priority
         transmogrify_priority(value)
       else
-        nil
+        value
       end
     end
     
@@ -163,7 +162,7 @@ module Growl
     # an exception.
     def transmogrify_priority(value)
       if value.kind_of?(Symbol)
-        return PRIORITIES[value]
+        return Growl::PRIORITIES[value] || 0
       elsif value.kind_of?(Integer) && (-2..2).include?(value)
         return value
       else
