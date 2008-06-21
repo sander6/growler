@@ -5,10 +5,10 @@ module Growl
   #
   # Unlike +Growl::Notification+, which taps into the Cocoa bindings for Growl, the +Growl+
   # module simply wraps the +growlnotify+ command-line utility. You might find that this is
-  # more convenient and powerful, since it's simple and has a much easier time with custom
-  # notification icons. This means, obviously, that you must have growlnotify installed.
+  # more convenient and powerful in some cases, since it's simple and has a much easier time
+  # with custom notification icons. Obviously, you must have growlnotify installed.
   #
-  # The advatage of Growler's CLI wrapper in comparison to previous attempts, beyond the
+  # The advantage of Growler's CLI wrapper in comparison to previous attempts, beyond the
   # automatic Leopard fix and data-massaging (see below for details about both), is that
   # message attributes are saved as instance attributes on the +Growl+ module itself,
   # (yes, this is valid Ruby; +Modules+ are just as much objects as anything else) meaning
@@ -52,155 +52,148 @@ module Growl
   @host = "localhost"
   @path = "/usr/local/bin/growlnotify"
 
-  # Setter for +@app_icon+. Automatically appends ".app" to the name given (unless the name
-  # already ends in ".app") to retain compatibility with Growl versions < 1.1.4.
-  def self.app_icon=(name)
-    @app_icon = self.app_icon_for(name)
-  end
-  
-  # Setter for +@icon_path+. Automatically expands the path given.
-  # Remember, Growl will use the _icon_ of the file that you point to; if you set +icon_path+
-  # to point to an image file, Growl will show the image file's icon, and not the image itself.
-  def self.icon_path=(path)
-    @icon_path = File.expand_path(path)
-  end
-  
-  # Setter for +@image+. Automatically expands the path given.
-  def self.image=(path)
-    @image = File.expand_path(path)
-  end
-  
-  # Setter for +@priority+. Accepts integers between -2 and 2 or priority names as symbols (e.g.
-  # :very_low, :low, :normal, :high, :very_high).
-  def self.priority=(value)
-    @priority = self.priority_for(value)
-  end
-  
-  # Catch-all attribute reader.
-  def self.[](attribute)
-    self.instance_variable_get :"@#{attribute}"
-  end
-  
-  # Catch-all attribute setter. Massages data just like described in other setters (for example,
-  # automatically appends ".app" to the name when setting +Growl[:app_icon]+).
-  def self.[]=(attribute, value)
-    self.instance_variable_set(:"@#{attribute}", transmogrify(attribute, value)) if ATTR_NAMES.include?(attribute)
-  end
-
-  # Returns a hash of the current settings.
-  def self.get_defaults
-    attributes = {}
-    ATTR_NAMES.each do |attribute|
-      attributes[attribute] = self[attribute]
-    end
-    return attributes
-  end
-
-  # Mass attribute setter. Pass attributes as a hash; returns self. Ignores any keys that aren't
-  # a usable attribute.
-  def self.set_defaults!(attrs = {})
-    attrs.each do |key, value|
-      self[key] = value if ATTR_NAMES.include?(key)
-    end
-    self
-  end
-
-  # Posts a notification based on the current module settings.
-  # Pass a hash of override attributes to alter the notification being posted without changing
-  # any attributes on the module.
-  #
-  # Calls +growlnotify+ using +%x[]+, so returns STDOUT from the shell. If there are no glaring
-  # errors in syntax, usually returns "". However, a return value of "" is no guarantee that
-  # the message actually showed up on the screen. If notifications aren't showing up, read the
-  # notes about "things to be aware of" at the top and see if those fix the problem.
-  #
-  # Aliased as +notify+.
-  def self.post(overrides = {})
-    %x[#{@path} #{self.build_message_string(overrides)}]
-  end
-  alias :notify :post
-
-  # Just like +post+ with automatic :sticky => true.
-  #
-  # Aliased as +stick+.
-  def self.pin(overrides = {})
-    post(overrides.merge(:sticky => true))
-  end
-  alias :stick :pin 
-  
-  # Sends the same message to each of the hosts specified.
-  # Send hosts and passwords as arrays.
-  # Example Growl.broadcast(["some.host", "pass"], ["some.other.host", "word"], ...)
-  def self.broadcast(*hosts)
-    hosts.each {|*host| self.post(:host => host[0], :password => host[1])}
-  end
-
-
-  protected
-
-  # Appends ".app" to the application name if it isn't already there. This is no longer
-  # necessary with Growl >= 1.1.4, but adding it doesn't hurt and allows compatibility
-  # with earlier versions.
-  def self.app_name_for(name)
-    name =~ /.*\.app$/ ? name : name + ".app"    
-  end
-  
-  # Converts priority symbol names to integers. Returns 0 if the name isn't found.
-  def self.priority_for(sym)
-    PRIORITIES[sym] || 0
-  end
-  
-  # Intelligently transforms simple inputs for :app_icon, :image, and :priority
-  # into what growlnotify expects.
-  def self.transmogrify(attribute, value)
-    return case attribute
-    when :app_icon
-      self.app_name_for(value)
-    when :icon_path
-      value ? File.expand_path(value) : nil
-    when :image
-      value ? File.expand_path(value) : nil
-    when :priority
-      value.is_a?(Numeric) ? value : self.priority_for(value)
-    else
-      value
-    end
-  end
-  
-  # Builds the actual command string that is passed to +growlnotify+.
-  def self.build_message_string(overrides = {})
-    # default_sticky    = overrides[:sticky]    || @sticky
-    # default_app_name  = overrides[:app_name]  || @app_name
-    # default_name      = overrides[:name]      || @name
-    # default_message   = overrides[:message]   || overrides[:msg]    || @message
-    # default_icon      = overrides[:icon]      || @icon
-    # default_icon_path = overrides[:icon_path] || @icon_path
-    # default_image     = overrides[:image]     || @image
-    # default_app_icon  = overrides[:app_icon]  || @app_icon
-    # default_priority  = overrides[:priority]  || @priority
-    # default_host      = overrides[:host]      || @host
-    # default_title     = overrides[:title]     || @title
+  class << self
     
-    options = self.get_defaults.merge(overrides)
+    # Setter for +@app_icon+. Automatically appends ".app" to the name given (unless the name
+    # already ends in ".app") to retain compatibility with Growl versions < 1.1.4.
+    def app_icon=(name)
+      @app_icon = self.app_icon_for(name)
+    end
+  
+    # Setter for +@icon_path+. Automatically expands the path given.
+    # Remember, Growl will use the _icon_ of the file that you point to; if you set +icon_path+
+    # to point to an image file, Growl will show the image file's icon, and not the image itself.
+    def icon_path=(path)
+      @icon_path = File.expand_path(path)
+    end
+  
+    # Setter for +@image+. Automatically expands the path given.
+    def image=(path)
+      @image = File.expand_path(path)
+    end
+  
+    # Setter for +@priority+. Accepts integers between -2 and 2 or priority names as symbols (e.g.
+    # :very_low, :low, :normal, :high, :very_high).
+    def priority=(value)
+      @priority = self.priority_for(value)
+    end
+  
+    # Catch-all attribute reader.
+    def [](attribute)
+      self.instance_variable_get :"@#{attribute}"
+    end
+  
+    # Catch-all attribute setter. Massages data just like described in other setters (for example,
+    # automatically appends ".app" to the name when setting +Growl[:app_icon]+).
+    def []=(attribute, value)
+      self.instance_variable_set(:"@#{attribute}", transmogrify(attribute, value)) if ATTR_NAMES.include?(attribute)
+    end
 
-    str = []
-    str << "-s"                            if options[:sticky]
-    str << "-n '#{options[:app_name]}'"    if options[:app_name]
-    str << "-d '#{options[:name]}'"        if options[:name]
-    str << "-m '#{options[:message]}'"
-    str << "-i '#{options[:icon]}'"        if options[:icon]
-    str << "-I '#{options[:icon_path]}'"   if options[:icon_path]
-    str << "--image '#{options[:image]}'"  if options[:image]
-    str << "-a '#{options[:app_icon]}'"    if options[:app_icon]
-    str << "-p #{options[:priority]}"      if options[:priority]
-    str << "-H #{options[:host]}"          if options[:host]
-    str << "-t '#{options[:title]}'"       if options[:title]
-    str.join(" ")
+    # Returns a hash of the current settings.
+    def get_defaults
+      attributes = {}
+      ATTR_NAMES.each do |attribute|
+        attributes[attribute] = self[attribute]
+      end
+      return attributes
+    end
+
+    # Mass attribute setter. Pass attributes as a hash; returns self. Ignores any keys that aren't
+    # a usable attribute.
+    def set_defaults!(attrs = {})
+      attrs.each do |key, value|
+        self[key] = value if ATTR_NAMES.include?(key)
+      end
+      self
+    end
+
+    # Posts a notification based on the current module settings.
+    # Pass a hash of override attributes to alter the notification being posted without changing
+    # any attributes on the module.
+    #
+    # Calls +growlnotify+ using +%x[]+, so returns STDOUT from the shell. If there are no glaring
+    # errors in syntax, usually returns "". However, a return value of "" is no guarantee that
+    # the message actually showed up on the screen. If notifications aren't showing up, read the
+    # notes about "things to be aware of" at the top and see if those fix the problem.
+    #
+    # Aliased as +notify+.
+    def post(overrides = {})
+      %x[#{@path} #{self.build_message_string(overrides)}]
+    end
+    alias :notify :post
+
+    # Just like +post+ with automatic :sticky => true.
+    #
+    # Aliased as +stick+.
+    def pin(overrides = {})
+      post(overrides.merge(:sticky => true))
+    end
+    alias :stick :pin 
+  
+    # Sends the same message to each of the hosts specified.
+    # Send hosts and passwords as arrays.
+    # Example Growl.broadcast(["some.host", "pass"], ["some.other.host", "word"], ...)
+    def broadcast(*hosts)
+      hosts.each {|*host| self.post(:host => host[0], :password => host[1])}
+    end
+
+
+    protected
+
+    # Appends ".app" to the application name if it isn't already there. This is no longer
+    # necessary with Growl >= 1.1.4, but adding it doesn't hurt and allows compatibility
+    # with earlier versions.
+    def app_name_for(name)
+      name =~ /.*\.app$/ ? name : name + ".app"    
+    end
+  
+    # Converts priority symbol names to integers. Returns 0 if the name isn't found.
+    def priority_for(sym)
+      PRIORITIES[sym] || 0
+    end
+  
+    # Intelligently transforms simple inputs for :app_icon, :image, and :priority
+    # into what growlnotify expects.
+    def transmogrify(attribute, value)
+      return case attribute
+      when :app_icon
+        self.app_name_for(value)
+      when :icon_path
+        value ? File.expand_path(value) : nil
+      when :image
+        value ? File.expand_path(value) : nil
+      when :priority
+        value.is_a?(Numeric) ? value : self.priority_for(value)
+      else
+        value
+      end
+    end
+  
+    # Builds the actual command string that is passed to +growlnotify+.
+    def build_message_string(overrides = {})
+      overrides.each { |key, value| overrides[key] = transmogrify(key, value) }
+      options = self.get_defaults.merge(overrides)
+      str = []
+      str << "-s"                            if options[:sticky]
+      str << "-n '#{options[:app_name]}'"    if options[:app_name]
+      str << "-d '#{options[:name]}'"        if options[:name]
+      str << "-m '#{options[:message]}'"
+      str << "-i '#{options[:icon]}'"        if options[:icon]
+      str << "-I '#{options[:icon_path]}'"   if options[:icon_path]
+      str << "--image '#{options[:image]}'"  if options[:image]
+      str << "-a '#{options[:app_icon]}'"    if options[:app_icon]
+      str << "-p #{options[:priority]}"      if options[:priority]
+      str << "-H #{options[:host]}"          if options[:host]
+      str << "-t '#{options[:title]}'"       if options[:title]
+      str.join(" ")
+    end
   end
 
+  # Default error for anything that goes wrong with a +Growl::Application+.
   class GrowlApplicationError < StandardError
   end
   
+  # Default error for anything that goes wrong with a +Growl::Notification+.
   class GrowlMessageError < StandardError
   end
 end
