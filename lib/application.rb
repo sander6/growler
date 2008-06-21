@@ -15,10 +15,8 @@ module Growl
     NOTIFICATION_CENTER = OSX::NSDistributedNotificationCenter.defaultCenter
     attr_accessor :name, :icon, :all_notifications, :default_notifications
     attr_reader   :registered, :frozen, :frozen_attributes_path
-    
-    def registered?
-      @registered
-    end
+    alias :messages     :all_notifications
+    alias :registered?  :registered
     
     def frozen?
       @frozen ||= File.exist?(File.expand_path(@frozen_attributes_path))
@@ -38,22 +36,38 @@ module Growl
       unless @all_notifications.include?(notification)
         @all_notifications << notification
         @default_notifications << notification
+        return notification
+      else
+        return false
       end
     end
+    alias :add_message :add_notification
     
     def remove_notification(notification)
       @all_notifications.delete(notification)
     end
+    alias :remove_message :remove_notification
     
     def enable_notification(notification)
       if @all_notifications.include?(notification) && !@default_notifications.include?(notification)
         @default_notifications << notification
+      else
+        return false
       end
     end
+    alias :enable_message :enable_notification
     
     def disable_notification(notification)
       @default_notifications.delete(notification)
     end
+    alias :disable_message :disable_notification
+    
+    def new_notification(attributes = {})
+      msg = Growl::Message.new(self, attributes)
+      self.add_notification(msg)
+      return msg
+    end
+    alias :new_message :new_notification
     
     def freeze_attributes!(path = "./growler_config.yaml")
       @frozen_attributes_path = File.expand_path(path)
@@ -69,6 +83,7 @@ module Growl
         end
         @frozen = true
       end
+      return @frozen
     end
     
     def unfreeze_attributes!
@@ -82,6 +97,11 @@ module Growl
         self[key] = attributes[key] if attributes.has_key?(key)
       end
       check_for_missing_attributes
+    end
+    
+    def reset_defaults!
+      unfreeze_attributes! if frozen?
+      set_attributes!(DEFAULT_ATTRIBUTES)
     end
     
     def check_for_missing_attributes
@@ -98,17 +118,22 @@ module Growl
     def initialize(path_or_attributes_hash = nil)
       if path_or_attributes_hash.is_a?(String)
         path = File.expand_path(path_or_attributes_hash)
-        if File.exist?(path)
-          attributes = File.open(path) {|file| YAML.load(file)}
-        else
-          raise Growl::GrowlApplicationAttributeError, "No configuration file to load at #{path}!"
-        end
+        attributes = load_attributes_from_file(path)
       elsif path_or_attributes_hash.is_a?(Hash)
         attributes = path_or_attributes_hash
       else
         attributes = DEFAULT_ATTRIBUTES
       end
       self.set_attributes!(attributes)
+      self
+    end
+    
+    def load_attributes_from_file(path)
+      if File.exist?(path)
+        return File.open(path) {|file| YAML.load(file)}
+      else
+        raise Growl::GrowlApplicationAttributeError, "No configuration file to load at #{path}!"
+      end
     end
     
     def register!
@@ -117,9 +142,16 @@ module Growl
                            "DefaultNotifications" => OSX::NSArray.arrayWithArray(@default_notifications.collect(&:name)),
                            "ApplicationIcon" => @icon}
       attrs = OSX::NSDictionary.dictionaryWithDictionary(registration_data)
-      name = "GrowlApplicationRegistrationNotification"
-      NOTIFICATION_CENTER.postNotificationName_object_userInfo_deliverImmediately(name, nil, attrs, true)
+      # Quite a mouthful.
+      OSX::NSDistributedNotificationCenter.defaultCenter.postNotificationName_object_userInfo_deliverImmediately("GrowlApplicationRegistrationNotification", nil, attrs, true)
       @registered = true
+    end
+    
+    def self.initialize_or_load_attributes_from_file(path, attributes = DEFAULT_ATTRIBUTES)
+      path = File.expand_path(path) if path
+      application = (path && File.exist?(path)) ? self.new(path) : self.new(attributes)
+      application.register! unless application.registered?
+      return application
     end
   end
 
