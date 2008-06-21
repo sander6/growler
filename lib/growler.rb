@@ -5,10 +5,17 @@ require 'fileutils'
 class GrowlerInitilizationError < StandardError
 end
 
+class Symbol
+  def to_proc
+    Proc.new {|*args| agrs.shift.__send__(self, *args)}
+  end
+end
+
 class Growl
   HERE = File.dirname(File.expand_path(__FILE__))
   PRIORITIES = {:very_low => -2, :low => -1, :regular => 0, :high => 1, :very_high => 2}
-  DEFAULT_NOTIFICATION_NAME = "Command-Line Growl Notification"
+    FakeGrowl = Struct.new(:name)
+    DEFAULT_NOTIFICATION = FakeGrowl.new("Command-Line Growl Notification")
   NOTIFICATION_CENTER = OSX::NSDistributedNotificationCenter.defaultCenter
   FROZEN_ATTRIBUTES_PATH = File.join(HERE, "resources", "growl_attributes.yaml")
   # The names of the different (instance) attributes on the Growl class.
@@ -20,8 +27,8 @@ class Growl
                         :path => "/usr/local/bin/growlnotify",
                         :host => "localhost",
                         :icon => OSX::NSData.data,
-                        :all_notifications => [DEFAULT_NOTIFICATION_NAME],
-                        :default_notifications => [DEFAULT_NOTIFICATION_NAME],
+                        :all_notifications => [DEFAULT_NOTIFICATION],
+                        :default_notifications => [DEFAULT_NOTIFICATION],
                         :registered => false}
   @frozen = File.exist?(FROZEN_ATTRIBUTES_PATH)
 
@@ -45,8 +52,8 @@ class Growl
 
   def self.register!
     cocoa_registration_data = {"ApplicationName" => @name,
-                               "AllNotifications" => OSX::NSArray.arrayWithArray(@all_notifications),
-                               "DefaultNotifications" => OSX::NSArray.arrayWithArray(@default_notifications),
+                               "AllNotifications" => OSX::NSArray.arrayWithArray(@all_notifications.collect(&:name)),
+                               "DefaultNotifications" => OSX::NSArray.arrayWithArray(@default_notifications.collect(&:name)),
                                "ApplicationIcon" => @icon}
     attrs = OSX::NSDictionary.dictionaryWithDictionary(cocoa_registration_data)
     name = "GrowlApplicationRegistrationNotification"
@@ -312,7 +319,7 @@ class Growl
   end
   
   def post_using_cocoa(overrides = {})
-    cocoa_notification_data = {"NotificationName" => (@name || Growl::DEFAULT_NOTIFICATION_NAME),
+    cocoa_notification_data = {"NotificationName" => (@name || Growl::DEFAULT_NOTIFICATION[:name]),
                                "ApplicationName" => Growl[:name],
                                "NotificationTitle" => (@title || ""),
                                "NotificationDescription" => @message,
