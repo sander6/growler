@@ -3,7 +3,10 @@ require 'yaml'
 require 'fileutils'
 
 module Growl
-  class GrowlerAttributeError < StandardError
+  class GrowlApplicationError < StandardError
+  end
+  
+  class GrowlMessageError < StandardError
   end
 end
 

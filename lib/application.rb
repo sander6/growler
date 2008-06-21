@@ -103,18 +103,7 @@ module Growl
       unfreeze_attributes! if frozen?
       set_attributes!(DEFAULT_ATTRIBUTES)
     end
-    
-    def check_for_missing_attributes
-      missing_attributes = ATTRIBUTE_NAMES.collect do |name|
-        name if self.instance_variable_get(:"@#{name}").nil?}
-      end.compact
-      if missing_attributes.empty?
-        return true
-      else
-        raise Growl::GrowlApplicationAttributeError, "Missing required attributes! (#{missing_attributes.join(", ")})"
-      end
-    end
-    
+        
     def initialize(path_or_attributes_hash = nil)
       if path_or_attributes_hash.is_a?(String)
         path = File.expand_path(path_or_attributes_hash)
@@ -128,18 +117,10 @@ module Growl
       self
     end
     
-    def load_attributes_from_file(path)
-      if File.exist?(path)
-        return File.open(path) {|file| YAML.load(file)}
-      else
-        raise Growl::GrowlApplicationAttributeError, "No configuration file to load at #{path}!"
-      end
-    end
-    
     def register!
       registration_data = {"ApplicationName" => @name,
-                           "AllNotifications" => OSX::NSArray.arrayWithArray(@all_notifications.collect(&:name)),
-                           "DefaultNotifications" => OSX::NSArray.arrayWithArray(@default_notifications.collect(&:name)),
+                           "AllNotifications" => OSX::NSArray.arrayWithArray(@all_notifications.collect {|n| n[:name]}),
+                           "DefaultNotifications" => OSX::NSArray.arrayWithArray(@default_notifications.collect {|n| n[:name]}),
                            "ApplicationIcon" => @icon}
       attrs = OSX::NSDictionary.dictionaryWithDictionary(registration_data)
       # Quite a mouthful.
@@ -153,6 +134,28 @@ module Growl
       application.register! unless application.registered?
       return application
     end
+    
+    protected    
+
+    def check_for_missing_attributes
+      missing_attributes = ATTRIBUTE_NAMES.collect do |name|
+        name if self.instance_variable_get(:"@#{name}").nil?}
+      end.compact
+      if missing_attributes.empty?
+        return true
+      else
+        raise Growl::GrowlApplicationError, "Missing required attributes! (#{missing_attributes.join(", ")})"
+      end
+    end
+
+    def load_attributes_from_file(path)
+      if File.exist?(path)
+        return File.open(path) {|file| YAML.load(file)}
+      else
+        raise Growl::GrowlApplicationError, "No configuration file to load at #{path}!"
+      end
+    end
+    
   end
 
 end
