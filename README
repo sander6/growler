@@ -40,7 +40,7 @@ and make a new Growl with the text of the message you want to post
 
   g = Growl.new("Finished processing")
   
-and post it using the +post+ method
+and post it using the post method
 
   g.post
 
@@ -49,7 +49,7 @@ Additional attributes, such as title, stickiness, and priority, can be passed as
   g = Growl.new("Finished processing", :title => "Complete!", :sticky => true, :priority => :high)
   g.post
   
-or set individually through the catch-all +[]=+ setter method
+or set individually through the catch-all []= setter method
 
   g = Growl.new("Finished processing")
   g[:title] = "Complete!"
@@ -70,14 +70,14 @@ Before using Growler in your applications, you should first configure Growler to
 
 Attributes on the Growl class determine the interaction with the actual Growl framework, as well as defining some default attributes on instances. The attributes on the Growl class are:
 
-  - name: the name of the application. Default is "Growler". This is the name under which your application will appear in the Growl Preference Pane - from there you can define default behavior for your notifications.
-  - host: the host machine where notification will be sent by default. Default is localhost.
-  - icon: the default icon that appears for each notification for this application. Default is blank NSData, which Growl changes into your system's default application icon. _TODO: Allow an application name or path to an image to be passed here, and that application's icon or the image at that path should be converted to NSData.
-  - all_notifications: an array of each notification (Growl instances) that this application will send.
-  - default notifications: an array of the notifications that are enabled by default. Default is the same as all_notifications.
-  - registered: whether or not this application has been registered yet. Defaults to false.
+- name: the name of the application. Default is "Growler". This is the name under which your application will appear in the Growl Preference Pane - from there you can define default behavior for your notifications.
+- host: the host machine where notification will be sent by default. Default is localhost.
+- icon: the default icon that appears for each notification for this application. Default is blank NSData, which Growl changes into your system's default application icon. _TODO: Allow an application name or path to an image to be passed here, and that application's icon or the image at that path should be converted to NSData.
+- all_notifications: an array of each notification (Growl instances) that this application will send.
+- default notifications: an array of the notifications that are enabled by default. Default is the same as all_notifications.
+- registered: whether or not this application has been registered yet. Defaults to false.
   
-These attributes can be set using the +[]=+ method on the Growl class, such as
+These attributes can be set using the []= method on the Growl class, such as
   
   Growl[:name] = "Some Awesome Ruby Application"
   
@@ -85,6 +85,4 @@ or they can be set en masse by passing a hash to Growl.set_defaults!
 
   Growl.set_defaults!(:name => "Some Awesome Ruby Application")
   
-+set_defaults!+ will throw a +GrowlerInitialzationError+ if any attributes are missing (nil).
-
-Once you've set the defaults, 
+set_defaults! will throw a GrowlerInitialzationError if any attributes are missing (nil).

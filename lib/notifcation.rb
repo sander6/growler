@@ -6,18 +6,18 @@ module Growl
     attr_reader ATTRIBUTES
     alias :sticky? :sticky
     
-    # Catch-all attribute reader. Basically an alias for +instance_variable_get+.
+    # Catch-all attribute reader. Basically an alias for instance_variable_get.
     def [](attribute)
       self.instance_variable_get :"@#{attribute}"
     end
     
     # Catch-all attribute setter; massages certain inputs to accomodate what Cocoa is looking for.
-    # Basically an alias for +instance_variable_set+.
+    # Basically an alias for instance_variable_set.
     def []=(attribute, value)
       self.instance_variable_set :"@#{attribute}", transmogrify(attribute, value)
     end
     
-    # Sets attributes of a message from a hash. Used internally when +initialize+ is called.
+    # Sets attributes of a message from a hash. Used internally when initialize is called.
     # Can be used publically to set multiple attributes at a time.
     def set_attributes(attributes = {})
       attributes.each do |key, value|
@@ -38,7 +38,7 @@ module Growl
     end
     
     # Initializes a new Growl::Notification instance. All necessary instance attributes are read from the
-    # attributes on application_parent or have sensible defaults, so +Growl::Notification.new+ with no
+    # attributes on application_parent or have sensible defaults, so Growl::Notification.new with no
     # arguments should return a valid (albeit boring) notification object ready to be posted.
     def initialize(*args)
       attributes = args.pop if args.last.is_a?(Hash)
@@ -131,7 +131,7 @@ module Growl
     end
     alias :notify :post
 
-    # Posts the message with +:sticky => true+.
+    # Posts the message with :sticky => true.
     def pin(overrides = {})
       post(overrides.merge({:sticky => true}))
     end

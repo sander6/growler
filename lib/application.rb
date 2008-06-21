@@ -60,14 +60,14 @@ module Growl
       end
     end
     
-    # Add the notification (as a +Growl::Notification+ object) and adds it to this application's
-    # +@all_notifications+ and +@default_notifications+. Returns nil on failure (if the notification
+    # Add the notification (as a Growl::Notification object) and adds it to this application's
+    # @all_notifications and @default_notifications. Returns nil on failure (if the notification
     # already existed), else returns the notification.
     #
-    # Adds this application as the +Notification+'s +@parent_application+, effectively stealing it
+    # Adds this application as the Notification's @parent_application, effectively stealing it
     # from the previous parent (if any).
     #
-    # Aliased as +add_message+.
+    # Aliased as add_message.
     def add_notification(notification)
       unless @all_notifications.include?(notification)
         notification[:parent_application] = self
@@ -80,21 +80,21 @@ module Growl
     end
     alias :add_message :add_notification
     
-    # Removes the notification from this application's +@all_notifications+ list. Also, naturally,
-    # removes it from the +@default_notifications+. Returns the removed notification, or nil if it
+    # Removes the notification from this application's @all_notifications list. Also, naturally,
+    # removes it from the @default_notifications. Returns the removed notification, or nil if it
     # wasn't found.
     #
-    # Aliased as +remove_message+.
+    # Aliased as remove_message.
     def remove_notification(notification)
       @default_notifications.disable_notification(notification)
       @all_notifications.delete(notification)
     end
     alias :remove_message :remove_notification
     
-    # Adds the notification to this application's +@default_notifications+. Returns nil on failure
-    # (if the notification was already in defaults, or it was not in +@all_notifications+).
+    # Adds the notification to this application's @default_notifications. Returns nil on failure
+    # (if the notification was already in defaults, or it was not in @all_notifications).
     #
-    # Aliased as +enable_message+.
+    # Aliased as enable_message.
     def enable_notification(notification)
       if @all_notifications.include?(notification) && !@default_notifications.include?(notification)
         @default_notifications << notification
@@ -104,33 +104,33 @@ module Growl
     end
     alias :enable_message :enable_notification
     
-    # Removes the notification from this application's +@default_notifications+; the notification
-    # remains in +@all_notifications+. Returns the deleted notification, or nil if it wasn't found.
+    # Removes the notification from this application's @default_notifications; the notification
+    # remains in @all_notifications. Returns the deleted notification, or nil if it wasn't found.
     #
-    # Aliased as +disable_message+.
+    # Aliased as disable_message.
     def disable_notification(notification)
       @default_notifications.delete(notification)
     end
     alias :disable_message :disable_notification
     
-    # Creates a new +Growl::Notification+ instance with the supplied attributes, sets +self+ to
-    # that notification's +parent_application+, and calls +add_notification+ on that instance,
-    # adding it to this application's +@all_notifications+ and +@default_notifications+. Returns
-    # the new +Notification+ object.
+    # Creates a new Growl::Notification instance with the supplied attributes, sets self to
+    # that notification's parent_application, and calls add_notification on that instance,
+    # adding it to this application's @all_notifications and @default_notifications. Returns
+    # the new Notification object.
     #
-    # Because of the way +Growl::Notification+ objects are initialized, most of the attributes for
+    # Because of the way Growl::Notification objects are initialized, most of the attributes for
     # the message are inherited from the application's attributes, and the rest have sensible
     # yet boring defaults.
     # 
-    # Therefore, +application.new_notification+ without any arguments should make a perfectly
+    # Therefore, application.new_notification without any arguments should make a perfectly
     # valid (albeit boring) message, ready to be posted. 
     #
-    # Because of the ease of use, this is the preferred way to create new +Notification+ objects.
+    # Because of the ease of use, this is the preferred way to create new Notification objects.
     #
-    # See +Growl::Notification.new+ for information on notification initialization, such as the
+    # See Growl::Notification.new for information on notification initialization, such as the
     # defaults.
     #
-    # Aliased as +new_message+.
+    # Aliased as new_message.
     def new_notification(attributes = {})
       msg = Growl::Message.new(self, attributes)
       self.add_notification(msg)
@@ -138,11 +138,11 @@ module Growl
     end
     alias :new_message :new_notification
     
-    # Freezes the current attributes by writing them to a YAML file at the +path+ specified.
+    # Freezes the current attributes by writing them to a YAML file at the path specified.
     # Returns true on success.
     #
     # This allows a measure of persistence to your Growl configuration, since this YAML file
-    # can be loaded up and used to initialize a +Growl::Application+ object. Therefore, you
+    # can be loaded up and used to initialize a Growl::Application object. Therefore, you
     # needn't go through the tedious process of declaring all your Application attributes
     # every time, provided you have your desired attributes frozen somewhere.
     def freeze_attributes!(path = "./growler_config.yaml")
@@ -163,7 +163,7 @@ module Growl
       return @frozen
     end
     
-    # Unfreezes attributes by tossing out the YAML file that was written with +freeze_attributes!+.
+    # Unfreezes attributes by tossing out the YAML file that was written with freeze_attributes!.
     # Raises an exception if the YAML file isn't found. Returns true on success.
     def unfreeze_attributes!
       FileUtils.rm(@frozen_attributes_path)
@@ -171,11 +171,11 @@ module Growl
       return !@frozen
     end
     
-    # Sets the attributes on this application from a supplied hash. Used internally for +initialize+,
+    # Sets the attributes on this application from a supplied hash. Used internally for initialize,
     # but could also be used publically to set multiple attributes at once.
     #
     # When finished, checks to make sure all required attributes are not nil, and raises a
-    # +Growl::GrowlApplicationError+ if any are missing. Returns true on success.
+    # Growl::GrowlApplicationError if any are missing. Returns true on success.
     def set_attributes!(attributes)
       ATTRIBUTE_NAMES.each do |key|
         self.instance_variable_set(:"@#{key}", attributes[key]) if attributes.has_key?(key)
@@ -184,15 +184,15 @@ module Growl
     end
     
     # Unfreezes attributes if frozen and resets attributes to the built-it defaults, as defined
-    # in the +Growl::Application::DEFAULT_ATTRIBUTES+ constant.
+    # in the Growl::Application::DEFAULT_ATTRIBUTES constant.
     def reset_defaults!
       unfreeze_attributes! if frozen?
       set_attributes!(DEFAULT_ATTRIBUTES)
     end
         
-    # Creates a new +Growl::Application+ instance.
+    # Creates a new Growl::Application instance.
     # Pass either the path to a pre-existing set of frozen attributes or a hash of new attributes
-    # to set; otherwise will use the +Growl::Application::DEFAULT_ATTRIBUTES+.
+    # to set; otherwise will use the Growl::Application::DEFAULT_ATTRIBUTES.
     def initialize(path_or_attributes_hash = nil)
       if path_or_attributes_hash.is_a?(String)
         path = File.expand_path(path_or_attributes_hash)
@@ -212,11 +212,11 @@ module Growl
     # notifications from this application, such as default display styles (which I believe is impossible
     # to do via scripting).
     #
-    # It's important to note that attempting to post a notification (i.e. calling +post+ on a +Growl::Notification+
+    # It's important to note that attempting to post a notification (i.e. calling post on a Growl::Notification
     # instance) will not work unless that notification is from a registered application and that notification's
     # name is in that application's all-notifications list.
     #
-    # Therefore, it's best to +register!+ your application after setting all your attributes and defining
+    # Therefore, it's best to register! your application after setting all your attributes and defining
     # all your messages. However, there's no downside to registering an application multiple times (it
     # simply get rewritten).
     def register!
@@ -229,16 +229,16 @@ module Growl
       @registered = true
     end
     
-    # Creates a new +Growl::Application+ instance and set it's attributes either from a supplied
+    # Creates a new Growl::Application instance and set it's attributes either from a supplied
     # hash, or by reading a YAML file at the provided location.
     #
-    # First, looks for a YAML file at the path provided. If found, initializes a new +Application+
+    # First, looks for a YAML file at the path provided. If found, initializes a new Application
     # object from the attributes read from that file. Otherwise, will initialize the object
     # from the attributes hash provided.
     #
-    # Will call +add_notification+ on each +Growl::Notification+ object passed as the
+    # Will call add_notification on each Growl::Notification object passed as the
     # :notifications key of the attributes hash, effectively adding this application as each of
-    # those messages +parent_application+, and adding those notifications to this application's
+    # those messages parent_application, and adding those notifications to this application's
     # all-notifications list. Will _not_ do this if the application already has notifications
     # (i.e. if it was restored from a frozen attributes file).
     #
@@ -247,9 +247,9 @@ module Growl
     # Finally, will register the application unless it is already registered or there are no
     # notifications.
     #
-    # Returns the +Application+ object created.
+    # Returns the Application object created.
     #
-    # Why all this rigmarole? With this one call, you can initialize or continue a +Growl::Application+
+    # Why all this rigmarole? With this one call, you can initialize or continue a Growl::Application
     # instance over multiple restarts of your program. Put this call in your program's initialization
     # file, or wherever it'll get run each time your program loads, and set a constant/global to catch
     # the output, and you'll have consistent, reusable Growl notification support throughout your program.    
@@ -274,7 +274,7 @@ module Growl
     
     protected    
 
-    # Checks to make sure all required attributes are not nil. Raises +Growl::GrowlApplicationError+
+    # Checks to make sure all required attributes are not nil. Raises Growl::GrowlApplicationError
     # if any attributes are missing. Otherwise returns true.
     def check_for_missing_attributes
       missing_attributes = ATTRIBUTE_NAMES.collect do |name|
@@ -287,9 +287,9 @@ module Growl
       end
     end
     
-    # Reads +Application+ attributes from a YAML file; used internally for persisting configuration
-    # settings across program restarts. Raises +Growl::GrowlApplicationError+ if no file is found
-    # at +path+.
+    # Reads Application attributes from a YAML file; used internally for persisting configuration
+    # settings across program restarts. Raises Growl::GrowlApplicationError if no file is found
+    # at path.
     def load_attributes_from_file(path)
       if File.exist?(path)
         return File.open(path) {|file| YAML.load(file)}

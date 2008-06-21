@@ -1,48 +1,35 @@
+# For simple scripts it's easier to just send one-off notifications without going through the
+# rigmarole of setting configuration and registering the application. For the times when that
+# would be overkill, the Growl module itself can be used to send simple notifications.
+#
+# Unlike Growl::Notification, which taps into the Cocoa bindings for Growl, the Growl
+# module simply wraps the growlnotify command-line utility. You might find that this is
+# more convenient and powerful in some cases, since it's simple and has a much easier time
+# with custom notification icons. Obviously, you must have growlnotify installed.
+#
+# The advantage of Growler's CLI wrapper in comparison to previous attempts, beyond the
+# automatic Leopard fix and data-massaging (see below for details about both), is that
+# message attributes are saved as instance attributes on the Growl module itself,
+# (yes, this is valid Ruby; Modules are just as much objects as anything else) meaning
+# that you can easily send multiple, similar messages without having to repeat yourself
+# over and over again.
+#
+# To use, set your messages attributes on the Growl module directly, then call Growl.post
+# to post the message.
+#
+# The attributes are as follows:
+#
+# Some things to be aware of:
+# 1. You can set the name of the application the Growl module posts as, but the notification won't show up unless that application has already been registered. The default application name is "growlnotify", so change those settings to alter how the Growl module's notifications appear. The same holds true for notification names.
+# 2. You cannot register the Growl module as an application. However, by setting the application name of the Growl module (Growl[:name] = name) to that of an already-registered application (either one you made using Growler or one from somewhere else), the notifications send by the module will inherit the settings for that application as defined in the Growl preference pane.
+# 3. There is a bug in Leopard (still persists in Leopard 10.5.3 and Growl 1.1.4) that causes many messages sent by growlnotify to be ignored. The workaround for this is to send network notifications to localhost. The Growl module does this hack automatically; however, you must check "Listen for incoming notifications" under the "Network" tab in the Growl preference pane for these notifications to show up.
+# 4. None of the attributes on the Growl module will affect anything concerning Application or Notification objects (unlike how Notifications default to inheriting certain attributes from their parent Application). Think of the module as just holding a single-shot notification.
+#
+# Currently, setting :udp, :auth, :crypt, :port, :progress or :wait does nothing.
+# Network functionality is planned for a later release, but the value of supporting :wait
+# at all is debateable. Currently, I have absolutely no clue what 'progress' is supposed to do.
+
 module Growl
-  # For simple scripts it's easier to just send one-off notifications without going through the
-  # rigmarole of setting configuration and registering the application. For the times when that
-  # would be overkill, the +Growl+ module itself can be used to send simple notifications.
-  #
-  # Unlike +Growl::Notification+, which taps into the Cocoa bindings for Growl, the +Growl+
-  # module simply wraps the +growlnotify+ command-line utility. You might find that this is
-  # more convenient and powerful in some cases, since it's simple and has a much easier time
-  # with custom notification icons. Obviously, you must have growlnotify installed.
-  #
-  # The advantage of Growler's CLI wrapper in comparison to previous attempts, beyond the
-  # automatic Leopard fix and data-massaging (see below for details about both), is that
-  # message attributes are saved as instance attributes on the +Growl+ module itself,
-  # (yes, this is valid Ruby; +Modules+ are just as much objects as anything else) meaning
-  # that you can easily send multiple, similar messages without having to repeat yourself
-  # over and over again.
-  #
-  # To use, set your messages attributes on the +Growl+ module directly, then call +Growl.post+
-  # to post the message.
-  #
-  # The attributes are as follows:
-  #
-  # Some things to be aware of:
-  #   1. You can set the name of the application the +Growl+ module posts as, but the notification
-  #   won't show up unless that application has already been registered. The default application
-  #   name is "growlnotify", so change those settings to alter how the +Growl+ module's
-  #   notifications appear. The same holds true for notification names.
-  #   2. You cannot register the +Growl+ module as an application. However, by setting the
-  #   application name of the +Growl+ module (+Growl[:name] = name+) to that of an already-
-  #   registered application (either one you made using Growler or one from somewhere else),
-  #   the notifications send by the module will inherit the settings for that application as
-  #   defined in the Growl preference pane.
-  #   3. There is a bug in Leopard (still persists in Leopard 10.5.3 and Growl 1.1.4) that
-  #   causes many messages sent by +growlnotify+ to be ignored. The workaround for this
-  #   is to send network notifications to localhost. The +Growl+ module does this hack automatically;
-  #   however, you must check "Listen for incoming notifications" under the "Network" tab in
-  #   the Growl preference pane for these notifications to show up.
-  #   4. None of the attributes on the +Growl+ module will affect anything concerning +Application+
-  #   or +Notification+ objects (unlike how +Notifications+ default to inheriting certain
-  #   attributes from their parent +Application+). Think of the module as just holding a
-  #   single-shot notification.
-  #
-  # Currently, setting +:udp+, +:auth+, +:crypt+, +:port+, +:progress+ or +:wait+ does nothing.
-  # Network functionality is planned for a later release, but the value of supporting +:wait+
-  # at all is debateable. Currently, I have absolutely no clue what 'progress' is supposed to do.
   
   PRIORITIES = {:very_low => -2, :low => -1, :normal => 0, :high => 1, :very_high => 2}
   ATTR_NAMES = [:message, :title, :sticky, :icon, :password, :host, :name, :path, :app_name, :app_icon, :icon_path, :image, :priority, :udp, :auth, :crypt, :wait, :port, :progress]
@@ -54,25 +41,25 @@ module Growl
 
   class << self
     
-    # Setter for +@app_icon+. Automatically appends ".app" to the name given (unless the name
+    # Setter for @app_icon. Automatically appends ".app" to the name given (unless the name
     # already ends in ".app") to retain compatibility with Growl versions < 1.1.4.
     def app_icon=(name)
       @app_icon = self.app_icon_for(name)
     end
   
-    # Setter for +@icon_path+. Automatically expands the path given.
-    # Remember, Growl will use the _icon_ of the file that you point to; if you set +icon_path+
+    # Setter for @icon_path. Automatically expands the path given.
+    # Remember, Growl will use the _icon_ of the file that you point to; if you set icon_path
     # to point to an image file, Growl will show the image file's icon, and not the image itself.
     def icon_path=(path)
       @icon_path = File.expand_path(path)
     end
   
-    # Setter for +@image+. Automatically expands the path given.
+    # Setter for @image. Automatically expands the path given.
     def image=(path)
       @image = File.expand_path(path)
     end
   
-    # Setter for +@priority+. Accepts integers between -2 and 2 or priority names as symbols (e.g.
+    # Setter for @priority. Accepts integers between -2 and 2 or priority names as symbols (e.g.
     # :very_low, :low, :normal, :high, :very_high).
     def priority=(value)
       @priority = self.priority_for(value)
@@ -84,7 +71,7 @@ module Growl
     end
   
     # Catch-all attribute setter. Massages data just like described in other setters (for example,
-    # automatically appends ".app" to the name when setting +Growl[:app_icon]+).
+    # automatically appends ".app" to the name when setting Growl[:app_icon]).
     def []=(attribute, value)
       self.instance_variable_set(:"@#{attribute}", transmogrify(attribute, value)) if ATTR_NAMES.include?(attribute)
     end
@@ -111,20 +98,20 @@ module Growl
     # Pass a hash of override attributes to alter the notification being posted without changing
     # any attributes on the module.
     #
-    # Calls +growlnotify+ using +%x[]+, so returns STDOUT from the shell. If there are no glaring
+    # Calls growlnotify using %x[], so returns STDOUT from the shell. If there are no glaring
     # errors in syntax, usually returns "". However, a return value of "" is no guarantee that
     # the message actually showed up on the screen. If notifications aren't showing up, read the
     # notes about "things to be aware of" at the top and see if those fix the problem.
     #
-    # Aliased as +notify+.
+    # Aliased as notify.
     def post(overrides = {})
       %x[#{@path} #{self.build_message_string(overrides)}]
     end
     alias :notify :post
 
-    # Just like +post+ with automatic :sticky => true.
+    # Just like post with automatic :sticky => true.
     #
-    # Aliased as +stick+.
+    # Aliased as stick.
     def pin(overrides = {})
       post(overrides.merge(:sticky => true))
     end
@@ -169,7 +156,7 @@ module Growl
       end
     end
   
-    # Builds the actual command string that is passed to +growlnotify+.
+    # Builds the actual command string that is passed to growlnotify.
     def build_message_string(overrides = {})
       overrides.each { |key, value| overrides[key] = transmogrify(key, value) }
       options = self.get_defaults.merge(overrides)
@@ -189,11 +176,11 @@ module Growl
     end
   end
 
-  # Default error for anything that goes wrong with a +Growl::Application+.
+  # Default error for anything that goes wrong with a Growl::Application.
   class GrowlApplicationError < StandardError
   end
   
-  # Default error for anything that goes wrong with a +Growl::Notification+.
+  # Default error for anything that goes wrong with a Growl::Notification.
   class GrowlMessageError < StandardError
   end
 end
