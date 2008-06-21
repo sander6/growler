@@ -3,7 +3,6 @@ require 'fileutils'
 require 'yaml'
 
 module Growl
-
   class Application
     PROTECTED_ATTRIBUTES = [:frozen, :frozen_attributes_path, :registered, :all_notifications, :default_notifications]
     ATTRIBUTE_NAMES = [:name, :icon, :all_notifications, :default_notifications]
@@ -17,6 +16,29 @@ module Growl
     attr_reader   :registered, :frozen, :frozen_attributes_path, :all_notifications, :default_notifications
     alias :messages     :all_notifications
     alias :registered?  :registered
+    
+    # Searches this applications all-notifications list for a notification of the given
+    # name and posts it.
+    def notify_by_name(name)
+      all_notifications[all_notifications.collect {|n| n[:name]}.index(name)].post
+    end
+    alias :post_by_name :notify_by_name
+    
+    # Posts the notification at the given index within this application's all-notifications
+    # list. Can pass :first, :last, or :random to post the first, the last, or a random
+    # notification, should you ever want to.
+    def notify_by_index(index_or_symbol)
+      if index_or_symbol.is_a?(Symbol)
+        index = case index_or_symbol
+                when :first   then 0
+                when :last    then -1
+                when :random  then rand(self.all_notifications.size)
+                end
+        notification = all_notifications[index]
+        notification.post if notification
+      end
+    end
+    alias :post_by_index :notify_by_index
     
     # Returns true or false depending on whether this application's attributes have been frozen
     # (that is, written to disk).
@@ -275,7 +297,5 @@ module Growl
         raise Growl::GrowlApplicationError, "No configuration file to load at #{path}!"
       end
     end
-    
   end
-
 end
