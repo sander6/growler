@@ -9,13 +9,13 @@ module Growl
     
     # Catch-all attribute reader. Basically an alias for +instance_variable_get+.
     def [](attribute)
-      instance_variable_get :"@#{attribute}"
+      self.instance_variable_get :"@#{attribute}"
     end
     
     # Catch-all attribute setter; massages certain inputs to accomodate what Cocoa is looking for.
     # Basically an alias for +instance_variable_set+.
     def []=(attribute, value)
-      instance_variable_set :"@#{attribute}", transmogrify(attribute, value)
+      self.instance_variable_set :"@#{attribute}", transmogrify(attribute, value)
     end
     
     # Sets attributes of a message from a hash. Used internally when +initialize+ is called.
@@ -41,11 +41,16 @@ module Growl
     # Initializes a new Growl::Notification instance. All necessary instance attributes are read from the
     # attributes on application_parent or have sensible defaults, so +Growl::Notification.new+ with no
     # arguments should return a valid (albeit boring) notification object ready to be posted.
-    def initialize(parent_application, attributes = {})
+    def initialize(*args)
+      attributes = args.pop if args.last.is_a?(Hash)
+      parent_application = args.shift
+      default_app_name  = parent_application ? parent_application.name : ""
+      default_name      = parent_application ? parent_application.default_notifications.first : ""
+      default_icon      = parent_application ? parent_application.icon : OSX::NSData.data
       defaults = {:parent_application => parent_application,
-                  :app_name => parent_application.name,
-                  :name => parent_application.default_notifications.first,
-                  :icon => parent_application.icon,
+                  :app_name => default_app_name,
+                  :name => default_name,
+                  :icon => default_icon,
                   :sticky => false,
                   :priority => 0,
                   :message => "",
