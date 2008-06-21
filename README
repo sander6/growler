@@ -28,7 +28,7 @@ Or cloned from the git repository and installed from local source.
 
   $ git clone git://github.com/PLACEHOLDER/growler.git
   $ cd growler
-  $ gem install growler-[version].gem
+  $ gem install ./growler-[version].gem
 
 = Summary
 
@@ -64,3 +64,13 @@ or chained together through the setter-chain methods
   
 = Usage
 
+Before using Growler in your applications, you should first configure Growler to use your application's settings, write those attributes to disk, and register your application with Growl.
+
+== Configuring Growler
+
+Attributes on the Growl class determine the interaction with the actual Growl framework, as well as defining some default attributes on instances. The attributes on the Growl class are:
+
+  - name: the name of the application. Default is "Growler". This is the name under which your application will appear in the Growl Preference Pane - from there you can define default behavior for your notifications.
+  - host: the host machine where notification will be sent by default. Default is localhost.
+  - icon: the default icon that appears for each notification for this application. Default is blank NSData, which Growl changes into your system's default application icon.
+  - all_notifications: 

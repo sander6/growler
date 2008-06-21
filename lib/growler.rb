@@ -16,7 +16,7 @@ class Growl
   PROTECTED_CATTRS = [:frozen]
   # The names of the different attributes on Growl instances.
   ATTR_NAMES = [:message, :title, :sticky, :icon, :icon_path, :priority, :app_icon, :image]
-  DEFAULT_ATTRIBUTES = {:name => "RubyGrowler",
+  DEFAULT_ATTRIBUTES = {:name => "Growler",
                         :path => "/usr/local/bin/growlnotify",
                         :host => "localhost",
                         :icon => OSX::NSData.data,

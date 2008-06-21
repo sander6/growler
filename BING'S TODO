@@ -29,3 +29,4 @@ BING'S TODO, in no particular order:
     - probably not
 10. Add #broadcast functionality (after networking is set up)
 11. Look up the *jours and see what Bonjour can do for you, if anything
+12. Instead of having global attributes defined in the gem, allow users to point to an application-local file to read defaults from.
