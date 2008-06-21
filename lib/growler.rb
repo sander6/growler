@@ -10,12 +10,6 @@ module Growl
   end
 end
 
-class Symbol
-  def to_proc
-    Proc.new {|*args| agrs.shift.__send__(self, *args)}
-  end
-end
-
 class Growl
   PROTECTED_CATTRS = [:frozen]
 
