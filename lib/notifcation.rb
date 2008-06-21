@@ -1,3 +1,5 @@
+require 'osx/cocoa'
+
 module Growl
   
   class Notification
@@ -106,9 +108,24 @@ module Growl
       when :icon
         transmogrify_icon(value)
       when :priority
-        transmogrify_icon(value)
+        transmogrify_priority(value)
       else
         nil
+      end
+    end
+    
+    # Currently just returns blank OSX::NSData.
+    def transmogrify_icon(icon)
+      OSX::NSData.data
+    end
+    
+    def transmogrify_priority(value)
+      if value.kind_of?(Symbol)
+        return PRIORITIES[value]
+      elsif value.kind_of?(Integer) && (-2..2).include?(value)
+        return value
+      else
+        return 0
       end
     end
   end
