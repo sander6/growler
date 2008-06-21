@@ -76,7 +76,7 @@ module Growl
       self
     end
     
-    def post(overrides)
+    def post(overrides = {})
       raise GrowlMessageParentError, "No parent application given!" unless @parent_application
       name      = @name     || overrides[:name]                   || ""
       app_name  = @app_name || overrides[:app_name]               || ""
@@ -97,7 +97,7 @@ module Growl
     end
     alias :notify :post
     
-    def pin(overrides)
+    def pin(overrides = {})
       post(overrides.merge({:sticky => true}))
     end
     alias :stick :pin
