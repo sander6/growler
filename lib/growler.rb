@@ -6,11 +6,19 @@ module Growl
   # Unlike +Growl::Notification+, which taps into the Cocoa bindings for Growl, the +Growl+
   # module simply wraps the +growlnotify+ command-line utility. You might find that this is
   # more convenient and powerful, since it's simple and has a much easier time with custom
-  # notification icons.
+  # notification icons. This means, obviously, that you must have growlnotify installed.
   #
-  # To use, set your messages attributes on the +Growl+ module directly, using about the same
-  # syntax and attribute names as you would for a +Growl::Notification+, then call +Growl.post+
-  # to post the message. 
+  # The advatage of Growler's CLI wrapper in comparison to previous attempts, beyond the
+  # automatic Leopard fix and data-massaging (see below for details about both), is that
+  # message attributes are saved as instance attributes on the +Growl+ module itself,
+  # (yes, this is valid Ruby; +Modules+ are just as much objects as anything else) meaning
+  # that you can easily send multiple, similar messages without having to repeat yourself
+  # over and over again.
+  #
+  # To use, set your messages attributes on the +Growl+ module directly, then call +Growl.post+
+  # to post the message.
+  #
+  # The attributes are as follows:
   #
   # Some things to be aware of:
   #   1. You can set the name of the application the +Growl+ module posts as, but the notification
