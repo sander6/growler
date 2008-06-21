@@ -1,3 +1,66 @@
-README
+= Growler: A simple Ruby Growl library
 
-This will be filled in later.
+Growler is a Ruby utility for posting notifications and registering applications through the Growl Framework. Unlike other Growl libraries, Growler uses Ruby idioms and intelligent data massaging to make it easy and natural to post notifications without having to know too much about how finicky Growl actually is.
+
+== Requirements
+
+Growler is compatible with Growl versions >= 1.1.2.
+
+Growler can obviously only post notifications on Mac OS X platforms (>=10.4). Network functionality is planned to allow notifications to be sent FROM non-Mac platforms, but the end host must obviously be running Mac OS X and have the Growl Framework installed.
+
+Growler requires RubyCocoa for application registration. There is no gem as far as I know, but if you have MacPorts, RubyCocoa can be installed with simply
+
+  $ sudo port install rb-cocoa
+
+RubyCocoa has it's own set of requirements to build and use. Read about them at the RubyCocoa project page http://rubycocoa.sourceforge.net/HomePage.
+
+== License
+
+Growler is released under the Ruby License. See the included LICENSE file for details.
+
+== Installation
+
+Growler can be installed via RubyGems.
+
+  $ sudo gem install growler
+  
+Or cloned from the git repository and installed from local source.
+
+  $ git clone git://github.com/PLACEHOLDER/growler.git
+  $ cd growler
+  $ gem install growler-[version].gem
+
+= Summary
+
+To use Growler for posting simple notifications in your scripts, simply include the Growler gem
+
+  require 'growler'
+
+and make a new Growl with the text of the message you want to post
+
+  g = Growl.new("Finished processing")
+  
+and post it using the post method
+
+  g.post
+
+Additional attributes, such as title, stickiness, and priority, can be passed as an options hash
+
+  g = Growl.new("Finished processing", :title => "Complete!", :sticky => true, :priority => :high)
+  g.post
+  
+or set individually through the catch-all []= setter method
+
+  g = Growl.new("Finished processing")
+  g[:title] = "Complete!"
+  g[:sticky] = true
+  g[:priority] = :high
+  g.post
+  
+or chained together through the setter-chain methods
+
+  g = Growl.new("Finished processing")
+  g.title("Complete!").sticky(true).priority(:high).post
+  
+= Usage
+
