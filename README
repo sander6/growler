@@ -1,18 +1,20 @@
-= Growler: A simple Ruby Growl library
+= Growler: Growl support for your Ruby applications
 
 Growler is a Ruby utility for posting notifications and registering applications through the Growl Framework. Unlike other Growl libraries, Growler uses Ruby idioms and intelligent data massaging to make it easy and natural to post notifications without having to know too much about how finicky Growl actually is.
 
 == Requirements
 
-Growler is compatible with Growl versions >= 1.1.2.
+Growler is compatible with Growl versions >= 1.1.2; versions as old a 0.6 might work, but haven't been tested.
 
 Growler can obviously only post notifications on Mac OS X platforms (>=10.4). Network functionality is planned to allow notifications to be sent FROM non-Mac platforms, but the end host must obviously be running Mac OS X and have the Growl Framework installed.
 
-Growler requires RubyCocoa for application registration. There is no gem as far as I know, but if you have MacPorts, RubyCocoa can be installed with simply
+Growler requires RubyCocoa for application registration. There seems to be no gem for it, but if you have MacPorts, RubyCocoa can be installed with simply
 
   $ sudo port install rb-cocoa
 
-RubyCocoa has it's own set of requirements to build and use. Read about them at the RubyCocoa project page http://rubycocoa.sourceforge.net/HomePage.
+Binaries or source code are available from the RubyCocoa SourceForge page (http://sourceforge.net/project/showfiles.php?group_id=44114).
+
+RubyCocoa has its own set of requirements to build and use. Read about them at the RubyCocoa project page http://rubycocoa.sourceforge.net/GettingStarted.
 
 == License
 
@@ -30,59 +32,45 @@ Or cloned from the git repository and installed from local source.
   $ cd growler
   $ gem install ./growler-[version].gem
 
+--------------------------------------------------
+
 = Summary
 
-To use Growler for posting simple notifications in your scripts, simply include the Growler gem
+To use Growler, require the gem
 
   require 'growler'
 
-and make a new Growl with the text of the message you want to post
+Growler can be used in one of two ways:
+1. to send simple notifications, or
+2. to register a full application with the Growl framework and send messages through that.
 
-  g = Growl.new("Finished processing")
+=== Simple notifications
+
+Sending "simple" notifications is mediated through methods on the Growl module itself. The Growl module wraps the growlnotify command line utility. To use, set your message arguments as instance variable on the Growl module, then call Growl.post.
+
+  Growl[:title] = "Process Completed"
+  Growl[:message] = "My work here is done."
+  Growl.post
+
+See the Growl module for a full list of options and usage instructions.
+
+=== Registering applications
+
+Growl::Application objects define applications registered with Growl, specifically the name, the default icon, and a list of notifications available to that application.
+
+To create and register an application, instantiate a new application object, pass the attributes you want to set to it, create some notifications for it, and then call register!.
+
+  app = Growl::Application.new
+  app[:name] = "My Awesome Ruby Application"
+  n1 = Growl::Notification.new(...)
+  n2 = Growl::Notification.new(...)
+  app.add_notifications(n1, n2)
+  app.register!
   
-and post it using the post method
+This will register the application with Growl. Building and registering an application with Growl allows you much more control and flexibility in the display of your notifications; after registration you can then open the Growl preference pane and set display options for each of that application's notifications, such as the display style, screen position, and priority. Unfortunately, there is no way to script these settings; it's up to your end-users to set fancy display styles for themselves.
 
-  g.post
+To post notifications, call notify_by_name on the Application instance and pass it a name that you defined when registering of the notification you want.
 
-Additional attributes, such as title, stickiness, and priority, can be passed as an options hash
-
-  g = Growl.new("Finished processing", :title => "Complete!", :sticky => true, :priority => :high)
-  g.post
+  app.notify_by_name("Process Completed")
   
-or set individually through the catch-all []= setter method
-
-  g = Growl.new("Finished processing")
-  g[:title] = "Complete!"
-  g[:sticky] = true
-  g[:priority] = :high
-  g.post
-  
-or chained together through the setter-chain methods
-
-  g = Growl.new("Finished processing")
-  g.title("Complete!").sticky(true).priority(:high).post
-  
-= Usage
-
-Before using Growler in your applications, you should first configure Growler to use your application's settings, write those attributes to disk, and register your application with Growl.
-
-== Configuring Growler
-
-Attributes on the Growl class determine the interaction with the actual Growl framework, as well as defining some default attributes on instances. The attributes on the Growl class are:
-
-- name: the name of the application. Default is "Growler". This is the name under which your application will appear in the Growl Preference Pane - from there you can define default behavior for your notifications.
-- host: the host machine where notification will be sent by default. Default is localhost.
-- icon: the default icon that appears for each notification for this application. Default is blank NSData, which Growl changes into your system's default application icon. _TODO: Allow an application name or path to an image to be passed here, and that application's icon or the image at that path should be converted to NSData.
-- all_notifications: an array of each notification (Growl instances) that this application will send.
-- default notifications: an array of the notifications that are enabled by default. Default is the same as all_notifications.
-- registered: whether or not this application has been registered yet. Defaults to false.
-  
-These attributes can be set using the []= method on the Growl class, such as
-  
-  Growl[:name] = "Some Awesome Ruby Application"
-  
-or they can be set en masse by passing a hash to Growl.set_defaults!
-
-  Growl.set_defaults!(:name => "Some Awesome Ruby Application")
-  
-set_defaults! will throw a GrowlerInitialzationError if any attributes are missing (nil).
+See Growl::Application for full details on building and registering applications and see Growl::Notification for details on building notifications.
