@@ -182,8 +182,9 @@ module Growl
       @name                   =   attributes[:name]
       @all_notifications      =   add_notifications(attributes[:notifications])
       @default_notifications  =   @all_notifications - attributes[:disabled_notifications]
-      @icon                   =   Growl::Application.extract_image_from(attributes)
-      @registerable = check_for_missing_attributes
+      @icon                   =   Growl::ImageExtractor.extract_image_from(attributes)
+      @registerable           =   check_for_missing_attributes
+      return self
     end
             
     # Creates a new Growl::Application instance.
@@ -199,7 +200,7 @@ module Growl
         attributes = {}
       end
       self.set_attributes!(attributes)
-      self
+      return self
     end
     
     # Registers this application with Growl.
@@ -297,43 +298,6 @@ module Growl
       else
         raise Growl::GrowlApplicationError, "No configuration file to load at #{path}!"
       end
-    end
-    
-    def self.extract_image_from(attributes)
-      img = nil
-      if attributes.has_key?(:image) && attributes[:image].is_a?(OSX::NSImage)
-        img = attributes[:image]
-      elsif attributes.has_key?(:image_path)
-        img = image_from_image_path(attributes[:image_path])
-      elsif attributes.has_key?(:icon_path)
-        img = image_from_icon_path(attributes[:icon_path])
-      elsif attributes.has_key?(:file_type_icon)
-        img = image_from_file_type_icon(attributes[:file_type_icon])
-      elsif attributes.has_key?(:app_name)
-        img = image_from_app_name(attributes[:app_name])
-      end
-      return img
-    end
-    
-    def self.image_from_image_path(path)
-      ns_string = OSX::NSString.stringWithString(File.expand_path(path))
-      OSX::NSImage.new.initWithContentsOfFile(ns_string)
-    end
-    
-    def self.image_from_icon_path(path)
-      ns_string = OSX::NSString.stringWithString(File.expand_path(path))
-      OSX::NSWorkspace.sharedWorkspace.iconForFile(ns_string)
-    end
-    
-    def self.image_from_file_type_icon(ext)
-      ns_string = OSX::NSString.stringWithString(ext)
-      OSX::NSWorkspace.sharedWorkspace.iconForFileType(ns_string)
-    end
-    
-    def self.image_from_app_name(name)
-      ns_string = OSX::NSString.stringWithString(name)
-      app_path = OSX::NSWorkspace.sharedWorkspace.fullPathForApplication(ns_string)
-      OSX::NSWorkspace.sharedWorkspace.iconForFile(app_path)
     end
   end
 end

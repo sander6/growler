@@ -2,7 +2,7 @@ require 'osx/cocoa'
 
 module Growl  
   class Notification
-    ATTRIBUTES = [:name, :app_name, :title, :message, :icon, :sticky, :priority, :parent_application]
+    ATTRIBUTES = [:name, :app_name, :title, :message, :icon, :sticky, :priority]
     ATTRIBUTES.each {|attribute| attr_accessor attribute}
     alias :sticky? :sticky
     
@@ -19,11 +19,12 @@ module Growl
     
     # Sets attributes of a message from a hash. Used internally when initialize is called.
     # Can be used publically to set multiple attributes at a time.
-    def set_attributes(attributes = {})
+    def set_attributes!(attributes = {})
       attributes.each do |key, value|
-        self[key] = value
+        self[key] = value if ATTRIBUTES.include?(key)
       end
-      self
+      @image = Growl::ImageExtractor.extract_image_from(attributes)
+      return self
     end
     
     # Returns a hash of the attributes of the message.
@@ -45,16 +46,15 @@ module Growl
       parent_application = args.shift
       default_app_name  = parent_application ? parent_application.name : ""
       default_name      = parent_application ? parent_application.default_notifications.first : ""
-      default_icon      = parent_application ? parent_application.icon : OSX::NSData.data
-      defaults = {:parent_application => parent_application,
-                  :app_name => default_app_name,
+      default_icon      = parent_application ? parent_application.icon : OSX::NSImage.new
+      defaults = {:app_name => default_app_name,
                   :name => default_name,
                   :icon => default_icon,
                   :sticky => false,
                   :priority => 0,
                   :message => "",
                   :title => ""}
-      self.set_attributes(defaults.merge(attributes))
+      self.set_attributes!(defaults.merge(attributes))
     end
     
     # Pass-through name-setter. Returns self so that the pass-through methods can be chained.
@@ -116,14 +116,14 @@ module Growl
       app_name  = @app_name || overrides[:app_name]               || ""
       title     = @title    || overrides[:title]                  || ""
       message   = @message  || overrides[:message]                || ""
-      icon      = @icon     || transmogrify(overrides[:icon])     || OSX::NSData.data
+      icon      = @icon     || transmogrify(overrides[:icon])     || OSX::NSImage.new
       sticky    = @sticky   || overrides[:sticky]                 || false
       priority  = @priority || transmogrify(overrides[:priority]) || 0
       data = {"NotificationName"        => name,
               "ApplicationName"         => app_name,
               "NotificationTitle"       => title,
               "NotificationDescription" => message,
-              "NotificationIcon"        => icon,
+              "NotificationIcon"        => icon.TIFFRepresentation,
               "NotificationSticky"      => OSX::NSNumber.numberWithBool(sticky),
               "NotificationPriority"    => OSX::NSNumber.numberWithInt(priority)}
       attrs = OSX::NSDictionary.dictionaryWithDictionary(data)
