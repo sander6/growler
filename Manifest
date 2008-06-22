@@ -4,7 +4,6 @@ lib/growler.rb
 lib/growler/application.rb
 lib/growler/growl.rb
 lib/growler/notification.rb
-lib/growler/transmogrifier.rb
 LICENSE
 Manifest
 Rakefile
