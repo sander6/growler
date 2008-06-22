@@ -4,21 +4,17 @@ require 'yaml'
 
 module Growl
   class Application
-    PROTECTED_ATTRIBUTES = [:frozen, :frozen_attributes_path, :registered, :all_notifications, :default_notifications]
-    ATTRIBUTE_NAMES = [:name, :icon, :all_notifications, :default_notifications]
-    DEFAULT_ATTRIBUTES = {:name => "Growler",
-                          :icon => OSX::NSData.data,
-                          :all_notifications => [],
-                          :default_notifications => [],
-                          :registered => false}
+    PROTECTED_ATTRIBUTES = [:frozen, :frozen_attributes_path, :registered, :registerable, :all_notifications, :default_notifications]
+    REQUIRED_ATTRIBUTE_NAMES = [:name, :icon, :all_notifications, :default_notifications]
     attr_accessor :name, :icon
-    attr_reader   :registered, :frozen, :frozen_attributes_path, :all_notifications, :default_notifications
-    alias :messages     :all_notifications
-    alias :registered?  :registered
+    attr_reader   :registered, :frozen, :frozen_attributes_path, :all_notifications, :default_notifications, :registerable
+    alias :messages       :all_notifications
+    alias :registered?    :registered
+    alias :registerable?  :registerable
     
     # Searches this applications all-notifications list for a notification of the given
     # name and posts it. You can pass a hash of overrides that get sent to the post method.
-    def notify_by_name(name, overrides = {}) # => nil
+    def notify_by_name(name, overrides = {})
       all_notifications[all_notifications.collect {|n| n[:name]}.index(name)].post(overrides)
     end
     alias :post_by_name :notify_by_name
@@ -27,7 +23,7 @@ module Growl
     # list. Can pass :first, :last, or :random to post the first, the last, or a random
     # notification, should you ever want to. You can pass a hash of overrides that get sent to
     # the post method on that notification.
-    def notify_by_index(index_or_symbol, overrides = {}) # => nil
+    def notify_by_index(index_or_symbol, overrides = {})
       if index_or_symbol.is_a?(Symbol)
         index = case index_or_symbol
                 when :first   then 0
@@ -42,19 +38,19 @@ module Growl
     
     # Returns true or false depending on whether this application's attributes have been frozen
     # (that is, written to disk).
-    def frozen? # => boolean
+    def frozen?
       @frozen ||= File.exist?(File.expand_path(@frozen_attributes_path))
     end
     
     # Catch-all attribute-getter.
-    def [](attribute) # => attribute or nil
+    def [](attribute)
       self.instance_variable_get(:"@#{attribute}")
     end
     
     # Catch-all attribute-setter. Doesn't allow one to set protected attributes (those that depend
     # on forces outside the scope of the Ruby application) such as :frozen, :frozen_attributes_path,
     # and :registered.
-    def []=(attribute, value) # => attribute or nil
+    def []=(attribute, value)
       unless PROTECTED_ATTRIBUTES.include?(attribute)
         self.instance_variable_set(:"@#{attribute}", value)      
       end
@@ -68,12 +64,12 @@ module Growl
     # from the previous parent (if any).
     #
     # Aliased as add_message.
-    def add_notifications(*notification) # => array of all_notifications
+    def add_notifications(*notifications)
       notifications.each do |notification|
         unless @all_notifications.include?(notification)
           notification[:parent_application] = self
           @all_notifications << notification
-          @default_notifications.enable_notification(notification)
+          self.enable_notification(notification)
         end
       end
       return @all_notifications
@@ -85,8 +81,8 @@ module Growl
     # wasn't found.
     #
     # Aliased as remove_message.
-    def remove_notification(notification) # => notification or nil
-      @default_notifications.disable_notification(notification)
+    def remove_notification(notification)
+      self.disable_notification(notification)
       @all_notifications.delete(notification)
     end
     alias :remove_message :remove_notification
@@ -95,7 +91,7 @@ module Growl
     # (if the notification was already in defaults, or it was not in @all_notifications).
     #
     # Aliased as enable_message.
-    def enable_notification(notification) # => notification or nil
+    def enable_notification(notification)
       if @all_notifications.include?(notification) && !@default_notifications.include?(notification)
         @default_notifications << notification
       else
@@ -108,7 +104,7 @@ module Growl
     # remains in @all_notifications. Returns the deleted notification, or nil if it wasn't found.
     #
     # Aliased as disable_message.
-    def disable_notification(notification) # => notification or nil
+    def disable_notification(notification)
       @default_notifications.delete(notification)
     end
     alias :disable_message :disable_notification
@@ -131,13 +127,15 @@ module Growl
     # defaults.
     #
     # Aliased as new_message.
-    def new_notification(attributes = {}) # => new notification
-      msg = Growl::Message.new(self, attributes)
+    def new_notification(attributes = {})
+      msg = Growl::Notification.new(self, attributes)
       self.add_notifications(msg)
       return msg
     end
     alias :new_message :new_notification
     
+    # This method is currently in transition and can't be relied upon to do anything.
+    #
     # Freezes the current attributes by writing them to a YAML file at the path specified.
     # Returns true on success.
     #
@@ -145,7 +143,8 @@ module Growl
     # can be loaded up and used to initialize a Growl::Application object. Therefore, you
     # needn't go through the tedious process of declaring all your Application attributes
     # every time, provided you have your desired attributes frozen somewhere.
-    def freeze_attributes!(path = "./growler_config.yaml") # => boolean
+    # def freeze_attributes!(path = "./growler_config.yaml")
+    def freeze_attributes!(path = "./config.growl")
       @frozen_attributes_path = File.expand_path(path)
       if check_for_missing_attributes
         attributes = {:name => @name,
@@ -153,19 +152,22 @@ module Growl
                       :all_notifications => @all_notifications,
                       :default_notifications => @default_notifications,
                       :registered => @registered,
+                      :registerable => @registerable,
                       :frozen => true,
                       :frozen_attributes_path => @frozen_attributes_path}
         File.open(@frozen_attributes_path, File::WRONLY|File::TRUNC|File::CREAT, 0666) do |file|
-          file.puts(attrs.to_yaml)
+          file.puts(Marshal.dump(attributes))
         end
         @frozen = true
       end
       return @frozen
     end
     
+    # This method is currently in transition and can't be relied upon to do anything.
+    #
     # Unfreezes attributes by tossing out the YAML file that was written with freeze_attributes!.
     # Raises an exception if the YAML file isn't found. Returns true on success.
-    def unfreeze_attributes! # => boolean
+    def unfreeze_attributes!
       FileUtils.rm(@frozen_attributes_path)
       @frozen = false
       return !@frozen
@@ -176,31 +178,25 @@ module Growl
     #
     # When finished, checks to make sure all required attributes are not nil, and raises a
     # Growl::GrowlApplicationError if any are missing. Returns true on success.
-    def set_attributes!(attributes) # => true on success, raises exception on failure
-      ATTRIBUTE_NAMES.each do |key|
-        self.instance_variable_set(:"@#{key}", attributes[key]) if attributes.has_key?(key)
-      end
-      check_for_missing_attributes
+    def set_attributes!(attributes)
+      @name                   =   attributes[:name]
+      @all_notifications      =   add_notifications(attributes[:notifications])
+      @default_notifications  =   @all_notifications - attributes[:disabled_notifications]
+      @icon                   =   Growl::Application.extract_image_from(attributes)
+      @registerable = check_for_missing_attributes
     end
-    
-    # Unfreezes attributes if frozen and resets attributes to the built-it defaults, as defined
-    # in the Growl::Application::DEFAULT_ATTRIBUTES constant.
-    def reset_defaults! # => true on success, raises exception on failure
-      unfreeze_attributes! if frozen?
-      set_attributes!(DEFAULT_ATTRIBUTES)
-    end
-        
+            
     # Creates a new Growl::Application instance.
     # Pass either the path to a pre-existing set of frozen attributes or a hash of new attributes
     # to set; otherwise will use the Growl::Application::DEFAULT_ATTRIBUTES.
-    def initialize(path_or_attributes_hash = nil) # => new Growl::Application
+    def initialize(path_or_attributes_hash = nil)
       if path_or_attributes_hash.is_a?(String)
         path = File.expand_path(path_or_attributes_hash)
         attributes = load_attributes_from_file(path)
       elsif path_or_attributes_hash.is_a?(Hash)
         attributes = path_or_attributes_hash
       else
-        attributes = DEFAULT_ATTRIBUTES
+        attributes = {}
       end
       self.set_attributes!(attributes)
       self
@@ -219,13 +215,21 @@ module Growl
     # Therefore, it's best to register! your application after setting all your attributes and defining
     # all your messages. However, there's no downside to registering an application multiple times (it
     # simply get rewritten).
-    def register! # => true
-      registration_data = {"ApplicationName" => @name,
-                           "AllNotifications" => OSX::NSArray.arrayWithArray(@all_notifications.collect {|n| n[:name]}),
-                           "DefaultNotifications" => OSX::NSArray.arrayWithArray(@default_notifications.collect {|n| n[:name]}),
-                           "ApplicationIcon" => @icon}
-      attrs = OSX::NSDictionary.dictionaryWithDictionary(registration_data)
-      OSX::NSDistributedNotificationCenter.defaultCenter.postNotificationName_object_userInfo_deliverImmediately("GrowlApplicationRegistrationNotification", nil, attrs, true)
+    def register!
+      all_notification_names = @all_notifications.collect {|n| n[:name]}
+      ns_all_notification_list = OSX::NSArray.arrayWithArray(all_notification_names)
+      default_notification_names = @default_notifications.collect {|n| n[:name]}
+      ns_default_notification_list = OSX::NSArray.arrayWithArray(default_notification_names)
+      ns_app_name = OSX::NSString.stringWithString(@name)
+      ns_icon = @icon.TIFFRepresentation
+      registration_data = {"ApplicationName"      => ns_app_name,
+                           "AllNotifications"     => ns_all_notification_list,
+                           "DefaultNotifications" => ns_default_notification_list,
+                           "ApplicationIcon"      => ns_icon}
+      ns_dict = OSX::NSDictionary.dictionaryWithDictionary(registration_data)
+      ns_note_center = OSX::NSDistributedNotificationCenter.defaultCenter
+      ns_name = OSX::NSString.stringWithString("GrowlApplicationRegistrationNotification")
+      ns_note_center.postNotificationName_object_userInfo_deliverImmediately(ns_name, nil, ns_dict, true)
       @registered = true
     end
     
@@ -253,7 +257,7 @@ module Growl
     # instance over multiple restarts of your program. Put this call in your program's initialization
     # file, or wherever it'll get run each time your program loads, and set a constant/global to catch
     # the output, and you'll have consistent, reusable Growl notification support throughout your program.    
-    def self.initialize_or_load_attributes_from_file(path, attributes) # => Growl::Application
+    def self.initialize_or_load_attributes_from_file(path, attributes)
       path = File.expand_path(path)
 
       application = File.exist?(path) ? self.new(path) : self.new(attributes)
@@ -272,28 +276,64 @@ module Growl
     
     protected    
 
-    # Checks to make sure all required attributes are not nil. Raises Growl::GrowlApplicationError
-    # if any attributes are missing. Otherwise returns true.
-    def check_for_missing_attributes # => true on success, or raises Growl::GrowlApplicationError on failure
+    # Checks to make sure all required attributes are not nil. If this method returns true, the application
+    # has all the attributes it needs to be registered correctly.
+    def check_for_missing_attributes
       missing_attributes = ATTRIBUTE_NAMES.collect do |name|
-        name if self.instance_variable_get(:"@#{name}").nil?}
+        name if self.instance_variable_get(:"@#{name}").nil?
       end.compact
-      if missing_attributes.empty?
-        return true
-      else
-        raise Growl::GrowlApplicationError, "Missing required attributes! (#{missing_attributes.join(", ")})"
-      end
+      return !missing_attributes.empty?
     end
     
+    # This method is currently in transition and can't be relied upon to do anything.
+    #
     # Reads Application attributes from a YAML file; used internally for persisting configuration
     # settings across program restarts. Raises Growl::GrowlApplicationError if no file is found
     # at path.
-    def load_attributes_from_file(path) # => object from YAML file, or raises Growl::GrowlApplicationError on failure
+    def load_attributes_from_file(path)
       if File.exist?(path)
-        return File.open(path) {|file| YAML.load(file)}
+        # return File.open(path) {|file| YAML.load(file)}
+        return File.open(path) {|file| Marshal.load(file)}
       else
         raise Growl::GrowlApplicationError, "No configuration file to load at #{path}!"
       end
+    end
+    
+    def self.extract_image_from(attributes)
+      img = nil
+      if attributes.has_key?(:image) && attributes[:image].is_a?(OSX::NSImage)
+        img = attributes[:image]
+      elsif attributes.has_key?(:image_path)
+        img = image_from_image_path(attributes[:image_path])
+      elsif attributes.has_key?(:icon_path)
+        img = image_from_icon_path(attributes[:icon_path])
+      elsif attributes.has_key?(:file_type_icon)
+        img = image_from_file_type_icon(attributes[:file_type_icon])
+      elsif attributes.has_key?(:app_name)
+        img = image_from_app_name(attributes[:app_name])
+      end
+      return img
+    end
+    
+    def self.image_from_image_path(path)
+      ns_string = OSX::NSString.stringWithString(File.expand_path(path))
+      OSX::NSImage.new.initWithContentsOfFile(ns_string)
+    end
+    
+    def self.image_from_icon_path(path)
+      ns_string = OSX::NSString.stringWithString(File.expand_path(path))
+      OSX::NSWorkspace.sharedWorkspace.iconForFile(ns_string)
+    end
+    
+    def self.image_from_file_type_icon(ext)
+      ns_string = OSX::NSString.stringWithString(ext)
+      OSX::NSWorkspace.sharedWorkspace.iconForFileType(ns_string)
+    end
+    
+    def self.image_from_app_name(name)
+      ns_string = OSX::NSString.stringWithString(name)
+      app_path = OSX::NSWorkspace.sharedWorkspace.fullPathForApplication(ns_string)
+      OSX::NSWorkspace.sharedWorkspace.iconForFile(app_path)
     end
   end
 end

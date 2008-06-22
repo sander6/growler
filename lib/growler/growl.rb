@@ -30,13 +30,14 @@
 # * :app_icon - name of an application (in /Applications or ~/Applications, for example) to borrow an icon from. Growl 1.1.4 eliminated the need to specifically add ".app" to the name; Growler ensures that the app name ends in ".app" to retain compatibility.
 # * :icon_path - path to a file whose icon will be used for this notification's icon.
 # * :image - a file type or extension to use as this notification's icon.
-# * :priority - sets the priority for this message. Pass either an integer between -2 and 2 or a priority name as a symbol (:very_low, :low, :normal, :high, :very_high). Default 0 (:normal).
+# * :priority - sets the priority for this message. Pass either an integer between -2 and 2 or a priority name as a symbol (:very_low, :moderate, :normal, :high, :emergency). Default 0 (:normal).
 # * :udp - boolean; use UDP instead of DO to send remote notificaiton; currently not implemented.
 # * :port - UDP port for notifications; currently not implemented.
 # * :auth - digest algorithm for UDP authentication. Either :md5, :sha256, or :none. Default :md5. Currently not implemented.
 # * :crypt - boolean; whether or not to encrypt UDP notifications. Currently not implemented.
 # * :wait - boolean; whether or not to wait for the notification to be clicked before continuing. Currently not implemented.
 # * :progress - set a progress value for this notification. Currently not implemented.
+# * :callback - a string of Ruby code that will be executed (via the command line "ruby -e") when this notification is clicked. If :callback is set, automatically sets :sticky => true. Note that since this is run in the command line, it's executed in the context of a new Ruby shell; that is, the code you pass will not have anything to do with the current environment that Growl.post was called in. However, a good use of :callback would be to define a meaningful return value for the post method (instead of "", which usually gets returned).
 #
 # Some things to be aware of:
 # 1. You can set the name of the application the Growl module posts as, but the notification won't show up unless that application has already been registered. The default application name is "growlnotify", so change those settings to alter how the Growl module's notifications appear. The same holds true for notification names.
@@ -50,9 +51,9 @@
 
 module Growl
   
-  PRIORITIES = {:very_low => -2, :low => -1, :normal => 0, :high => 1, :very_high => 2}
-  ATTR_NAMES = [:message, :title, :sticky, :icon, :password, :host, :name, :path, :app_name, :app_icon, :icon_path, :image, :priority, :udp, :auth, :crypt, :wait, :port, :progress]
-  attr_accessor :message, :title, :sticky, :icon, :password, :host, :name, :path, :app_name, :udp, :auth, :crypt, :wait, :port, :progress
+  PRIORITIES = {:very_low => -2, :moderate => -1, :low => -1, :normal => 0, :high => 1, :very_high => 2, :emergency => 2}
+  ATTR_NAMES = [:message, :title, :sticky, :icon, :password, :host, :name, :path, :app_name, :app_icon, :icon_path, :image, :priority, :udp, :auth, :crypt, :wait, :port, :progress, :callback]
+  attr_accessor :message, :title, :sticky, :icon, :password, :host, :name, :path, :app_name, :udp, :auth, :crypt, :wait, :port, :progress, :callback
   attr_reader   :app_icon, :icon_path, :image, :priority
   alias :msg  :message
   alias :msg= :message=
@@ -80,7 +81,7 @@ module Growl
     end
   
     # Setter for @priority. Accepts integers between -2 and 2 or priority names as symbols (e.g.
-    # :very_low, :low, :normal, :high, :very_high).
+    # :very_low, :moderate, :normal, :high, :emergency).
     def priority=(value)
       @priority = self.priority_for(value)
     end
@@ -181,7 +182,8 @@ module Growl
       overrides.each { |key, value| overrides[key] = transmogrify(key, value) }
       options = self.get_defaults.merge(overrides)
       str = []
-      str << "-s"                            if options[:sticky]
+      str << "-s"                            if (options[:sticky] || options[:callback])
+      str << "-w"                            if (options[:wait]   || options[:callback])
       str << "-n '#{options[:app_name]}'"    if options[:app_name]
       str << "-d '#{options[:name]}'"        if options[:name]
       str << "-m '#{options[:message]}'"
@@ -192,6 +194,9 @@ module Growl
       str << "-p #{options[:priority]}"      if options[:priority]
       str << "-H #{options[:host]}"          if options[:host]
       str << "-t '#{options[:title]}'"       if options[:title]
+      if options[:callback]
+        str << "; ruby -e \"#{options[:callback]}\""
+      end
       str.join(" ")
     end
   end
