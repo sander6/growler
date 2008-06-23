@@ -1,4 +1,4 @@
-require 'osx/cocoa'
+require 'objc'
 require 'fileutils'
 require 'yaml'
 
