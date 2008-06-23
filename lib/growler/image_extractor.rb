@@ -1,8 +1,8 @@
-require 'osx/cocoa'
+require 'objc'
 
 module Growl
   class ImageExtractor
-    include OSX
+    include ObjC
 
     class << self
                
@@ -23,24 +23,24 @@ module Growl
       end
     
       def image_from_image_path(path)
-        ns_string = NSString.stringWithString(File.expand_path(path))
-        NSImage.new.initWithContentsOfFile(ns_string)
+        ns_string = NSString.stringWithString_(File.expand_path(path))
+        NSImage.alloc.initWithContentsOfFile_(ns_string)
       end
     
       def image_from_icon_path(path)
-        ns_string = NSString.stringWithString(File.expand_path(path))
-        NSWorkspace.sharedWorkspace.iconForFile(ns_string)
+        ns_string = NSString.stringWithString_(File.expand_path(path))
+        NSWorkspace.sharedWorkspace.iconForFile_(ns_string)
       end
     
       def image_from_file_type_icon(ext)
-        ns_string = NSString.stringWithString(ext)
-        NSWorkspace.sharedWorkspace.iconForFileType(ns_string)
+        ns_string = NSString.stringWithString_(ext)
+        NSWorkspace.sharedWorkspace.iconForFileType_(ns_string)
       end
     
       def image_from_app_name(name)
-        ns_string = NSString.stringWithString(name)
-        app_path = NSWorkspace.sharedWorkspace.fullPathForApplication(ns_string)
-        NSWorkspace.sharedWorkspace.iconForFile(app_path)
+        ns_string = NSString.stringWithString_(name)
+        app_path = NSWorkspace.sharedWorkspace.fullPathForApplication_(ns_string)
+        NSWorkspace.sharedWorkspace.iconForFile_(app_path)
       end
             
     end

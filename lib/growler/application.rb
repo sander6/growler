@@ -218,19 +218,19 @@ module Growl
     # simply get rewritten).
     def register!
       all_notification_names = @all_notifications.collect {|n| n[:name]}
-      ns_all_notification_list = OSX::NSArray.arrayWithArray(all_notification_names)
+      ns_all_notification_list = ObjC::NSArray.arrayWithArray_(all_notification_names)
       default_notification_names = @default_notifications.collect {|n| n[:name]}
-      ns_default_notification_list = OSX::NSArray.arrayWithArray(default_notification_names)
-      ns_app_name = OSX::NSString.stringWithString(@name)
+      ns_default_notification_list = ObjC::NSArray.arrayWithArray_(default_notification_names)
+      ns_app_name = ObjC::NSString.stringWithString_(@name)
       ns_icon = @icon.TIFFRepresentation
       registration_data = {"ApplicationName"      => ns_app_name,
                            "AllNotifications"     => ns_all_notification_list,
                            "DefaultNotifications" => ns_default_notification_list,
                            "ApplicationIcon"      => ns_icon}
-      ns_dict = OSX::NSDictionary.dictionaryWithDictionary(registration_data)
-      ns_note_center = OSX::NSDistributedNotificationCenter.defaultCenter
-      ns_name = OSX::NSString.stringWithString("GrowlApplicationRegistrationNotification")
-      ns_note_center.postNotificationName_object_userInfo_deliverImmediately(ns_name, nil, ns_dict, true)
+      ns_dict = ObjC::NSDictionary.dictionaryWithDictionary_(registration_data)
+      ns_note_center = ObjC::NSDistributedNotificationCenter.defaultCenter
+      ns_name = ObjC::NSString.stringWithString_("GrowlApplicationRegistrationNotification")
+      ns_note_center.postNotificationName_object_userInfo_deliverImmediately_(ns_name, nil, ns_dict, true)
       @registered = true
     end
     

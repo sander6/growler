@@ -1,4 +1,4 @@
-require 'osx/cocoa'
+require 'objc'
 
 module Growl  
   class Notification
@@ -46,7 +46,7 @@ module Growl
       parent_application = args.shift
       default_app_name  = parent_application ? parent_application.name : ""
       default_name      = parent_application ? parent_application.default_notifications.first : ""
-      default_icon      = parent_application ? parent_application.icon : OSX::NSImage.new
+      default_icon      = parent_application ? parent_application.icon : ObjC::NSImage.alloc.init
       defaults = {:app_name => default_app_name,
                   :name => default_name,
                   :icon => default_icon,
@@ -115,7 +115,7 @@ module Growl
       app_name  = @app_name || overrides[:app_name]               || ""
       title     = @title    || overrides[:title]                  || ""
       message   = @message  || overrides[:message]                || ""
-      icon      = @icon     || transmogrify(overrides[:icon])     || OSX::NSImage.new
+      icon      = @icon     || transmogrify(overrides[:icon])     || ObjC::NSImage.alloc.init
       sticky    = @sticky   || overrides[:sticky]                 || false
       priority  = @priority || transmogrify(overrides[:priority]) || 0
       data = {"NotificationName"        => name,
@@ -123,10 +123,10 @@ module Growl
               "NotificationTitle"       => title,
               "NotificationDescription" => message,
               "NotificationIcon"        => icon.TIFFRepresentation,
-              "NotificationSticky"      => OSX::NSNumber.numberWithBool(sticky),
-              "NotificationPriority"    => OSX::NSNumber.numberWithInt(priority)}
-      attrs = OSX::NSDictionary.dictionaryWithDictionary(data)
-      OSX::NSDistributedNotificationCenter.defaultCenter.postNotificationName_object_userInfo_deliverImmediately("GrowlNotification", nil, attrs, true)
+              "NotificationSticky"      => ObjC::NSNumber.numberWithBool_(sticky),
+              "NotificationPriority"    => ObjC::NSNumber.numberWithInt_(priority)}
+      attrs = ObjC::NSDictionary.dictionaryWithDictionary_(data)
+      ObjC::NSDistributedNotificationCenter.defaultCenter.postNotificationName_object_userInfo_deliverImmediately_("GrowlNotification", nil, attrs, true)
     end
     alias :notify :post
 
@@ -153,7 +153,7 @@ module Growl
     # Currently just returns blank OSX::NSData. This makes Growl use the system default application icon.
     # Will eventually try to take an application name or image path as input and use that.
     def transmogrify_icon(icon)
-      OSX::NSData.data
+      ObjC::NSData.data
     end
     
     # Converts priority symbol names to their integer counterparts.
