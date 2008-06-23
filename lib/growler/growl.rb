@@ -60,6 +60,7 @@ module Growl
   @path = "/usr/local/bin/growlnotify"
 
   class << self
+    include Growl::ImageExtractor::Simple
     
     # Setter for @app_icon. Automatically appends ".app" to the name given (unless the name
     # already ends in ".app") to retain compatibility with Growl versions < 1.1.4.

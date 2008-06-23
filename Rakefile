@@ -5,7 +5,7 @@ require 'rake/gempackagetask'
 spec = Gem::Specification.new do |s|
     s.platform          =   Gem::Platform::RUBY
     s.name              =   "growler"
-    s.version           =   "0.6"
+    s.version           =   "0.6.1"
     s.author            =   "Sander Hartlage"
     s.email             =   "sander6 at rubyforge dot org"
     s.homepage          =   ""

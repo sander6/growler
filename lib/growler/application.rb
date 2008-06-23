@@ -4,6 +4,7 @@ require 'yaml'
 
 module Growl
   class Application
+    include Growl::ImageExtractor::ObjectiveC
     PROTECTED_ATTRIBUTES = [:frozen, :frozen_attributes_path, :registered, :registerable, :all_notifications, :default_notifications]
     REQUIRED_ATTRIBUTE_NAMES = [:name, :icon, :all_notifications, :default_notifications]
     attr_accessor :name, :icon
@@ -182,7 +183,7 @@ module Growl
       @name                   =   attributes[:name]
       @all_notifications      =   add_notifications(attributes[:notifications])
       @default_notifications  =   @all_notifications - attributes[:disabled_notifications]
-      @icon                   =   Growl::ImageExtractor.extract_image_from(attributes)
+      @icon                   =   extract_image_from(attributes)
       @registerable           =   check_for_missing_attributes
       return self
     end

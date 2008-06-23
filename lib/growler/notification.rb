@@ -2,6 +2,7 @@ require 'objc'
 
 module Growl  
   class Notification
+    include Growl::ImageExtractor::ObjectiveC
     ATTRIBUTES = [:name, :app_name, :title, :message, :icon, :sticky, :priority]
     ATTRIBUTES.each {|attribute| attr_accessor attribute}
     alias :sticky? :sticky
@@ -23,7 +24,7 @@ module Growl
       attributes.each do |key, value|
         self[key] = value if ATTRIBUTES.include?(key)
       end
-      @image = Growl::ImageExtractor.extract_image_from(attributes)
+      @image = extract_image_from(attributes)
       return self
     end
     
