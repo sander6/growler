@@ -156,7 +156,7 @@ module Growl
     # necessary with Growl >= 1.1.4, but adding it doesn't hurt and allows compatibility
     # with earlier versions.
     def app_name_for(name)
-      name =~ /.*\.app$/ ? name : name + ".app"    
+      name =~ /.*\.app$/ ? name : name + ".app" 
     end
   
     # Converts priority symbol names to integers. Returns 0 if the name isn't found.
@@ -169,7 +169,7 @@ module Growl
     def transmogrify(attribute, value)
       return case attribute
       when :app_icon
-        self.app_name_for(value)
+        self.app_name_for(value) if value
       when :icon_path
         value ? File.expand_path(value) : nil
       when :image

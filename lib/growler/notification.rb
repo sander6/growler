@@ -46,7 +46,7 @@ module Growl
       attributes = args.pop if args.last.is_a?(Hash)
       parent_application = args.shift
       default_app_name  = parent_application ? parent_application.name : ""
-      default_name      = parent_application ? parent_application.default_notifications.first : ""
+      default_name      = ""
       default_icon      = parent_application ? parent_application.icon : ObjC::NSImage.alloc.init
       defaults = {:app_name => default_app_name,
                   :name => default_name,
@@ -123,7 +123,7 @@ module Growl
               "ApplicationName"         => app_name,
               "NotificationTitle"       => title,
               "NotificationDescription" => message,
-              "NotificationIcon"        => icon.TIFFRepresentation,
+              "NotificationIcon"        => icon,
               "NotificationSticky"      => ObjC::NSNumber.numberWithBool_(sticky),
               "NotificationPriority"    => ObjC::NSNumber.numberWithInt_(priority)}
       attrs = ObjC::NSDictionary.dictionaryWithDictionary_(data)

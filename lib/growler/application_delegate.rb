@@ -27,10 +27,10 @@ module Growl
     # the Growl::Application it was built for.
     def self.build(application)
       delegate = self.alloc
-      name = ObjC::NSString.stringWithString_(application[:name])
-      icon = application[:icon].TIFFRepresentation if application[:icon].respond_to?(:TIFFRepresentation)
-      all_notifications = ObjC::NSArray.arrayWithArray_(application[:all_notifications])
-      default_notifications = ObjC::NSArray.arrayWithArray_(application[:default_notifications])
+      name = ObjC::NSString.stringWithString_(application.name)
+      icon = application.icon.TIFFRepresentation if application.icon.respond_to?(:TIFFRepresentation)
+      all_notifications = ObjC::NSArray.arrayWithArray_(application.all_notifications)
+      default_notifications = ObjC::NSArray.arrayWithArray_(application.default_notifications)
       delegate.initWithName_icon_allNotifications_defaultNotifications_(name, icon, all_notifications, default_notifications)
       delegate.instance_variable_set(:@application, application)
       return delegate
@@ -39,7 +39,7 @@ module Growl
     # Sets this object as a delegate of the GrowlApplicationBridge, allowing communication between
     # the two.
     def set!
-      Growl::ApplicationBridge.setDelegate_(self)
+      Growl::ApplicationBridge.setGrowlDelegate_(self)
     end
     
     imethod "init" do

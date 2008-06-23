@@ -4,6 +4,7 @@ module Growl; end
 
 $LOAD_PATH.unshift(File.dirname(__FILE__))
 
+require 'growler/image_extractor'
 require 'growler/growl'
 require 'growler/application'
 require 'growler/notification'

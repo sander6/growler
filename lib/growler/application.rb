@@ -83,9 +83,9 @@ module Growl
     #
     # Aliased as add_message.
     def add_notifications(*notifications)
+      @all_notifications ||= []
       notifications.each do |notification|
         unless @all_notifications.include?(notification)
-          notification[:parent_application] = self
           @all_notifications << notification
           self.enable_notification(notification)
         end
@@ -110,6 +110,7 @@ module Growl
     #
     # Aliased as enable_message.
     def enable_notification(notification)
+      @default_notifications ||= []
       if @all_notifications.include?(notification) && !@default_notifications.include?(notification)
         @default_notifications << notification
       else
@@ -198,8 +199,12 @@ module Growl
     # Growl::GrowlApplicationError if any are missing. Returns true on success.
     def set_attributes!(attributes)
       @name                   =   attributes[:name]
-      @all_notifications      =   add_notifications(attributes[:notifications])
-      @default_notifications  =   @all_notifications - attributes[:disabled_notifications]
+      @all_notifications      =   add_notifications(attributes[:notifications]) if attributes[:notifications]
+      if attributes[:disabled_notifications] && attributes[:disabled_notifications].is_a?(Array)
+        @default_notifications  =   @all_notifications - attributes[:disabled_notifications]
+      else
+        @default_notifications  =   @all_notifications
+      end
       @icon                   =   extract_image_from(attributes)
       @registerable           =   check_for_missing_attributes
       return self
@@ -271,13 +276,14 @@ module Growl
     #
     # These callbacks take no arguments.
     def define_callback!(type, &method)
+      shadow = class << self; self; end
       case type
       when :ready
-        self.__send__(:define_method, :growl_is_ready, &method)
+        shadow.__send__(:define_method, :growl_is_ready, &method)
       when :onclick
-        self.__send__(:define_method, :growl_notification_was_clicked, &method)
+        shadow.__send__(:define_method, :growl_notification_was_clicked, &method)
       when :ontimeout
-        self.__send__(:define_method, :growl_notification_timed_out, &method)
+        shadow.__send__(:define_method, :growl_notification_timed_out, &method)
       else
         raise Growl::GrowlApplicationError, "Invalid callback type! (must be :ready, :onclick, or :ontimeout)"
       end
@@ -329,7 +335,7 @@ module Growl
     # Checks to make sure all required attributes are not nil. If this method returns true, the application
     # has all the attributes it needs to be registered correctly.
     def check_for_missing_attributes
-      missing_attributes = ATTRIBUTE_NAMES.collect do |name|
+      missing_attributes = REQUIRED_ATTRIBUTE_NAMES.collect do |name|
         name if self.instance_variable_get(:"@#{name}").nil?
       end.compact
       return !missing_attributes.empty?
