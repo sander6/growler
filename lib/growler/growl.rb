@@ -50,7 +50,7 @@
 
 module Growl
   
-  PRIORITIES = {:very_low => -2, :moderate => -1, :low => -1, :normal => 0, :high => 1, :very_high => 2, :emergency => 2}
+  PRIORITIES = {:very_low => -2, :moderate => -1, :normal => 0, :high => 1, :emergency => 2}
   ATTR_NAMES = [:message, :title, :sticky, :icon, :password, :host, :name, :path, :app_name, :app_icon, :icon_path, :image, :priority, :udp, :auth, :crypt, :wait, :port, :progress]
   attr_accessor :message, :title, :sticky, :icon, :password, :host, :name, :path, :app_name, :udp, :auth, :crypt, :wait, :port, :progress
   attr_reader   :app_icon, :icon_path, :image, :priority
@@ -106,12 +106,16 @@ module Growl
     end
 
     # Mass attribute setter. Pass attributes as a hash; returns self. Ignores any keys that aren't
-    # a usable attribute.
+    # a usable attribute. Initializes all instance variables even if they aren't set to anything;
+    # this keeps a million warnings from popping up in the console.
     def set_defaults!(attrs = {})
-      attrs.each do |key, value|
-        self[key] = value if ATTR_NAMES.include?(key)
+      ATTR_NAMES.each do |attribute|
+        self[attribute] = attrs[attribute] || self[attribute]
       end
-      self
+      # attrs.each do |key, value|
+      #   self[key] = value if ATTR_NAMES.include?(key)
+      # end
+      return self
     end
 
     # Posts a notification based on the current module settings.
