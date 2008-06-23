@@ -28,8 +28,8 @@ module Growl
     end
     
     # Returns a hash of the attributes of the message.
-    # Only returns :name, :app_name, :title, :message, :icon, :sticky, :priority, and :parent_application;
-    # other bogus attributes that might have been set (i.e. using #[]) will not be returned in the hash.
+    # Only returns :name, :app_name, :title, :message, :icon, :sticky, and :priority; other bogus
+    # attributes that might have been set (i.e. using #[]) will not be returned in the hash.
     def get_attributes
       attributes = {}
       ATTRIBUTES.each do |attribute|
@@ -111,7 +111,6 @@ module Growl
     # will result in no message getting posted. This could possibly be useful to make one message
     # masquerade as if sent by a different program, should you ever want to.
     def post(overrides = {})
-      raise Growl::GrowlMessageError, "No parent application given!" unless @parent_application
       name      = @name     || overrides[:name]                   || ""
       app_name  = @app_name || overrides[:app_name]               || ""
       title     = @title    || overrides[:title]                  || ""

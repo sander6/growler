@@ -21,7 +21,7 @@
 # * :message - the body of the notification.
 # * :title - the title of the notification.
 # * :sticky - boolean; whether or not the notification is sticky. Default false.
-# * :icon - 
+# * :icon - a file type or extension to use as this notification's icon.
 # * :password - password to send to a remote machine.
 # * :host - host to send the notification to. Default is "localhost" to fix a bug in Leopard.
 # * :name - the name of the notification. If the name you specify isn't found by Growl in the list of available notifications for the application you specify, nothing will actually get posted. The default argument is nil, which Growl interprets to mean "Command-Line Growl Notification".
@@ -29,7 +29,7 @@
 # * :app_name - name of the application sending the notification. Default nil, which Growl interprets as "growlnotify". Note that if you set the :app_name to something, that application will have to already be registered with Growl, else no notification will show up.
 # * :app_icon - name of an application (in /Applications or ~/Applications, for example) to borrow an icon from. Growl 1.1.4 eliminated the need to specifically add ".app" to the name; Growler ensures that the app name ends in ".app" to retain compatibility.
 # * :icon_path - path to a file whose icon will be used for this notification's icon.
-# * :image - a file type or extension to use as this notification's icon.
+# * :image - path to an image file which should be used from this notificaiton's icon.
 # * :priority - sets the priority for this message. Pass either an integer between -2 and 2 or a priority name as a symbol (:very_low, :moderate, :normal, :high, :emergency). Default 0 (:normal).
 # * :udp - boolean; use UDP instead of DO to send remote notificaiton; currently not implemented.
 # * :port - UDP port for notifications; currently not implemented.
