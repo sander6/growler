@@ -42,18 +42,35 @@ module Growl
     def frozen?
       @frozen ||= File.exist?(File.expand_path(@frozen_attributes_path))
     end
-    
+
+    #--
     # Catch-all attribute-getter.
-    def [](attribute)
-      self.instance_variable_get(:"@#{attribute}")
-    end
+    # def [](attribute)
+    #   self.instance_variable_get(:"@#{attribute}")
+    # end
     
     # Catch-all attribute-setter. Doesn't allow one to set protected attributes (those that depend
     # on forces outside the scope of the Ruby application) such as :frozen, :frozen_attributes_path,
     # and :registered.
-    def []=(attribute, value)
-      unless PROTECTED_ATTRIBUTES.include?(attribute)
-        self.instance_variable_set(:"@#{attribute}", value)      
+    # def []=(attribute, value)
+    #   unless PROTECTED_ATTRIBUTES.include?(attribute)
+    #     self.instance_variable_set(:"@#{attribute}", value)      
+    #   end
+    # end
+    #++
+    
+    # Returns the notification in this application's all_notifications with the given name, or creates
+    # a new one with the given name if one wasn't found.
+    #
+    # Note that creating a new notification this way does not inform Growl about it (call register!
+    # to do that), so attempting to post that notification will fail until the application is
+    # (re)registered.
+    def [](name)
+      msg = all_notifications[all_notifications.collect {|n| n[:name]}.index(name)]
+      if msg
+        return msg
+      else
+        return new_notification(self, :name => name)
       end
     end
     
@@ -235,6 +252,37 @@ module Growl
       @registered = true
     end
     
+    # Instantiates a new Growl::ApplicationBridgeDelegate linked to this Application. When the
+    # (actual) GrowlApplicationBridge sends a callback to the delegate, will, in turn, call a
+    # callback on this Application. There are events that trigger callbacks:
+    # * :ready - called with Growl is launched. Is not called if the delegate is set while Growl is already running.
+    # * :onclick - called when a notification is clicked.
+    # * :ontimeout - called when a notification times out.
+    #
+    # These callbacks can be set by calling define_callback!
+    def build_delegate!
+      Growl::ApplicationBridgeDelegate.build(self)
+    end
+    
+    # Defines a callback to run on certain events. The types are:
+    # * :ready - called with Growl is launched. Is not called if the delegate is set while Growl is already running.
+    # * :onclick - called when a notification is clicked.
+    # * :ontimeout - called when a notification times out.
+    #
+    # These callbacks take no arguments.
+    def define_callback!(type, &method)
+      case type
+      when :ready
+        self.__send__(:define_method, :growl_is_ready, &method)
+      when :onclick
+        self.__send__(:define_method, :growl_notification_was_clicked, &method)
+      when :ontimeout
+        self.__send__(:define_method, :growl_notification_timed_out, &method)
+      else
+        raise Growl::GrowlApplicationError, "Invalid callback type! (must be :ready, :onclick, or :ontimeout)"
+      end
+    end
+    
     # Creates a new Growl::Application instance and set it's attributes either from a supplied
     # hash, or by reading a YAML file at the provided location.
     #
@@ -300,5 +348,16 @@ module Growl
         raise Growl::GrowlApplicationError, "No configuration file to load at #{path}!"
       end
     end
+    
+    private
+    
+    # Null growlIsReady callback.
+    def growl_is_ready; end
+    
+    # Null growlNotificationWasClicked callback.
+    def growl_notification_was_clicked; end
+    
+    # Null growlNotificationTimedOut callback.
+    def growl_notification_timed_out; end
   end
 end

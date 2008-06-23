@@ -2,7 +2,7 @@ require 'objc'
 
 module Growl
   
-  # The ImageExtractor allows images (for notification icons) to be references simply
+  # The ImageExtractor allows images (for notification icons) to be referenced simply
   # by manipulating data in clever ways.
   module ImageExtractor
     
@@ -10,18 +10,18 @@ module Growl
     # a Growl::Application or Growl::Notification and locating the proper image as an
     # ObjC::NSImage object. This allows one to say something like
     #   Growl::Notification.new(:app_icon => "Mail")
-    # and be conifdent that ImageExtractor will go and do the right thing; that is,
+    # and be confident that ImageExtractor will go and do the right thing; that is,
     # find the application icon for Mail.app and use it as that Notification's icon.
     module ObjectiveC
       
       # This method is automatically called on the attributes hash passed when calling
       # new or set_attributes! on Application or Notification objects. It looks for the
       # following keys in order:
-      #   - :image - an ObjC::NSImage object of the icon you want
-      #   - :image_path - a path to an image file you want to use as the icon
-      #   - :icon_path - a path to any file whose icon you want to use
-      #   - :file_type_icon - a file-type or extension whose default icon you want to use
-      #   - :app_icon - the name of an application whose file icon you want to use
+      # - :image - an ObjC::NSImage object of the icon you want
+      # - :image_path - a path to an image file you want to use as the icon
+      # - :icon_path - a path to any file whose icon you want to use
+      # - :file_type_icon - a file-type or extension whose default icon you want to use
+      # - :app_icon - the name of an application whose file icon you want to use
       # (paths will be expanded using File.expand_path)
       #
       # The first of these keys which does not return a nil object will be used for the
@@ -43,7 +43,9 @@ module Growl
         end
         return img
       end
-
+      
+      protected
+      
       # Takes the path supplied and returns an ObjC::NSImage object initialized with
       # the contents of the image at that path. Returns nil if the file at the path
       # is not a valid image.
@@ -82,11 +84,11 @@ module Growl
     module Simple
       
       # This method gets called on the hash passed to the Growl module when calling
-      # set_defaults!, post, or pin. It looks for the following key in order:
-      #   - :image - a path to an image file to use as the notification's icon
-      #   - :icon_path - a path to a file whose icon you want to use as the notification's icon
-      #   - :file_type_icon - a file type extension whose icon you want to use
-      #   - :app_icon - the name of an application whose icon you want to use
+      # set_defaults!, post, or pin. It looks for the following keys in order:
+      # - :image - a path to an image file to use as the notification's icon
+      # - :icon_path - a path to a file whose icon you want to use as the notification's icon
+      # - :file_type_icon - a file type extension whose icon you want to use
+      # - :app_icon - the name of an application whose icon you want to use
       # (paths will be expanded using File.expand_path)
       #
       # The first of these keys that returns a non-nil value when searching for the image
@@ -108,6 +110,8 @@ module Growl
         end
         return img
       end
+      
+      protected
       
       # Takes a path to a image file that you want to use as the notification's icon.
       # Returns nil if the file doesn't exist.

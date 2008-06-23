@@ -70,15 +70,15 @@ module Growl
     end
     
     imethod "growlIsReady", "v@:" do
-      @application.__send__(:growl_id_ready_callback)
+      @application.__send__(:growl_is_ready)
     end
     
     imethod "growlNotificationWasClicked:", "v@:i" do
-      @application.__send__(:growl_notification_was_clicked_callback)
+      @application.__send__(:growl_notification_was_clicked)
     end
     
     imethod "growlNotificationTimedOut:", "v@:i" do
-      @application.__send__(:growl_notification_timed_out_callback)
+      @application.__send__(:growl_notification_timed_out)
     end
     
   end
