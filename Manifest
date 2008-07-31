@@ -4,12 +4,11 @@ lib/growler.rb
 lib/growler/application.rb
 lib/growler/growl.rb
 lib/growler/notification.rb
+lib/growler/extractors/image_extractor.rb
+lib/growler/extractors/priority_extractor.rb
+lib/grolwer/helpers/returning.rb
 LICENSE
 Manifest
 Rakefile
 README
-tests/application_test.rb
-tests/growl_test.rb
-tests/notification_test.rb
-tests/test_helper.rb
 TODO

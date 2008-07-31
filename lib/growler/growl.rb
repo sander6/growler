@@ -50,53 +50,109 @@
 
 module Growl
   
-  PRIORITIES = {:very_low => -2, :moderate => -1, :normal => 0, :high => 1, :emergency => 2}
   ATTR_NAMES = [:message, :title, :sticky, :icon, :password, :host, :name, :path, :app_name, :app_icon, :icon_path, :image, :priority, :udp, :auth, :crypt, :wait, :port, :progress]
-  attr_accessor :message, :title, :sticky, :icon, :password, :host, :name, :path, :app_name, :udp, :auth, :crypt, :wait, :port, :progress
-  attr_reader   :app_icon, :icon_path, :image, :priority
-  alias :msg  :message
-  alias :msg= :message=
-  @host = "localhost"
-  @path = "/usr/local/bin/growlnotify"
-
+  ATTR_NAMES.each { |a| attr_accessor a }
+  
   class << self
-    include Growl::ImageExtractor::Simple
+    include Growl::PriorityExtractor
+    include Growl::Returning
+
+    # Yields a new Growl::Application to the block you provide, then registers it when done.
+    #
+    # This method exists to be forward compatible with eventual functionality to set a
+    # Growl:Application object as a delegate of the GrowlApplicationBridge. Setting up the
+    # application this way will keep users from having to remember the byzantine registration
+    # steps involved and just worry about setting their own application-specific settings.
+    def application
+      application = returning(Growl::Application.new) { |a| yield(a) }
+      returning application do |a|
+        if a.kind_of?(Growl::Application)
+          a.register! if a.registerable?
+          # ... more stuff will eventually go here.
+        end
+      end
+    end
+
+    # Pass-through name-setter. Returns self so that the pass-through methods can be chained.
+    # Note that the name of this notification must be registered with Growl before it can
+    # be posted.
+    def name(name)
+      @name = name
+      self
+    end
+
+    # Pass-through app_name-setter. Returns self so that the pass-through methods can be chained.
+    # Note that the name of this application must be registered with Growl before it can be posted.
+    def app_name(name)
+      @app_name = name
+      self
+    end
+
+    # Pass-through title-setter. Returns self so that the pass-through methods can be chained. Chaining
+    # the methods just looks good somehow.
+    def title(title)
+      @title = title
+      self
+    end
+
+    # Pass-through message-setter. Returns self so that the pass-through methods can be chained.        
+    def message(msg)
+      @message = msg
+      self
+    end
     
-    # Setter for @app_icon. Automatically appends ".app" to the name given (unless the name
-    # already ends in ".app") to retain compatibility with Growl versions < 1.1.4.
-    def app_icon=(name)
-      @app_icon = self.app_icon_for(name)
+    # Pass-through icon-setter. Takes a path to an image file and uses that as this notification's
+    # icon. Returns self so that the pass-through methods can be chained.
+    def image(path)
+      @image = transmogrify(:image, path)
+      self
+    end
+    
+    # Pass-through icon-setter. Takes a path to a file and uses that file's icon as this
+    # notification's icon. Note that even if the file at the path you specify is an image, will use
+    # that file's icon (e.g. the default .jpg icon) and not the file's contents (use image_path to 
+    # use the file's contents). Returns self so that the pass-through methods can be chained.
+    def icon_path(path)
+      @icon_path = transmogrify(:icon_path, path)
+      self
+    end
+    
+    # Pass-through icon-setter. Takes a file type extension (such as "rb" or "torrent") and uses
+    # the default system icon for that file type as this notification's icon. Returns self so that
+    # the pass-through methods can be chained.
+    def file_type(type)
+      @icon = type
+      self
+    end
+    
+    # Pass-through icon-setter. Takes the name of an application (such as "Safari" or "Quicksilver")
+    # and uses that application's icon for this notification's icon. Returns self so that the pass-
+    # through methods can be chained.
+    def app_icon(name)
+      @app_icon = transmogrify(:app_icon, name)
+      self
+    end
+    
+    # Pass-through sticky-setter. Returns self so that the pass-through methods can be chained.
+    def sticky(bool)
+      @sticky = bool
+      self
+    end
+
+    # Pass-through priority-setter. Returns self so that the pass-through methods can be chained.
+    # Accepts either a priority name as a symbol (:very_low, :moderate, :normal, :high, or
+    # :emergency) or an integer bewteen -2 and 2.
+    def priority(value)
+      @priority = get_priority_for(value)
+      self
     end
   
-    # Setter for @icon_path. Automatically expands the path given.
-    # Remember, Growl will use the _icon_ of the file that you point to; if you set icon_path
-    # to point to an image file, Growl will show the image file's icon, and not the image itself.
-    def icon_path=(path)
-      @icon_path = File.expand_path(path)
-    end
-  
-    # Setter for @image. Automatically expands the path given.
-    def image=(path)
-      @image = File.expand_path(path)
-    end
-  
-    # Setter for @priority. Accepts integers between -2 and 2 or priority names as symbols (e.g.
-    # :very_low, :moderate, :normal, :high, :emergency).
-    def priority=(value)
-      @priority = self.priority_for(value)
-    end
-  
-    # Catch-all attribute reader.
+    # Catch-all attribute reader. Used to prettify attribute reading by exposing the module's
+    # attributes as if they were a hash.
     def [](attribute)
       self.instance_variable_get :"@#{attribute}"
     end
   
-    # Catch-all attribute setter. Massages data just like described in other setters (for example,
-    # automatically appends ".app" to the name when setting Growl[:app_icon]).
-    def []=(attribute, value)
-      self.instance_variable_set(:"@#{attribute}", transmogrify(attribute, value)) if ATTR_NAMES.include?(attribute)
-    end
-
     # Returns a hash of the current settings.
     def get_defaults
       attributes = {}
@@ -113,9 +169,6 @@ module Growl
       ATTR_NAMES.each do |attribute|
         self[attribute] = attrs[attribute] || self[attribute]
       end
-      # attrs.each do |key, value|
-      #   self[key] = value if ATTR_NAMES.include?(key)
-      # end
       return self
     end
 
@@ -148,34 +201,53 @@ module Growl
     def broadcast(*hosts)
       hosts.each {|*host| self.post(:host => host[0], :password => host[1])}
     end
-
+    
+    # Resets all attributes back to the defaults (mostly just nil). Used in testing.
+    def reset!
+      @message = ""
+      @title = ""
+      @sticky = false
+      @icon = nil
+      @password = nil
+      @host = "localhost"
+      @name = "Command-Line Growl Notification"
+      @path = "/usr/local/bin/growlnotify"
+      @app_name = "growlnotify"
+      @app_icon = nil
+      @icon_path = nil
+      @image = nil
+      @priority = 0
+      @udp = nil
+      @auth = nil
+      @crypt = nil
+      @wait = nil
+      @port = nil
+      @progress = nil
+    end
 
     protected
 
-    # Appends ".app" to the application name if it isn't already there. This is no longer
-    # necessary with Growl >= 1.1.4, but adding it doesn't hurt and allows compatibility
-    # with earlier versions.
-    def app_name_for(name)
-      name =~ /.*\.app$/ ? name : name + ".app" 
+    # Catch-all attribute setter, used internally. Massages data just like other
+    # setters (for example, automatically appends ".app" to the name when setting
+    # Growl.app_icon).
+    def []=(attribute, value)
+      if ATTR_NAMES.include?(attribute)
+        self.instance_variable_set(:"@#{attribute}", transmogrify(attribute, value)) 
+      end
     end
-  
-    # Converts priority symbol names to integers. Returns 0 if the name isn't found.
-    def priority_for(sym)
-      PRIORITIES[sym] || 0
-    end
-  
+
     # Intelligently transforms simple inputs for :app_icon, :image, and :priority
     # into what growlnotify expects.
     def transmogrify(attribute, value)
       return case attribute
       when :app_icon
-        self.app_name_for(value) if value
+        (value =~ /.*\.app/ ? value : value + ".app") if value
       when :icon_path
-        value ? File.expand_path(value) : nil
+        File.expand_path(value) if value
       when :image
-        value ? File.expand_path(value) : nil
+        File.expand_path(value) if value
       when :priority
-        value.is_a?(Numeric) ? value : self.priority_for(value)
+        get_priority_for(value)
       else
         value
       end
@@ -201,6 +273,9 @@ module Growl
       str.join(" ")
     end
   end
+  
+  # Initialize the defaults.
+  self.reset!
 
   # Default error for anything that goes wrong with a Growl::Application.
   class GrowlApplicationError < StandardError
