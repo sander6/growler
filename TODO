@@ -3,3 +3,7 @@ TODO:
 1. Write real tests
   - how can you check if the notification posted without looking at it?
   - can you get notification information from the GrowlApplicationBridge?
+  
+2. Get this on RubyForge
+  - figure out what the problem with pushing to RubyForge is.
+  - downplay all the stuff where you say you can install this with 'gem'.

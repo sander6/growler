@@ -78,17 +78,17 @@ To create and register an application, instantiate a new application object, pas
   app.add_notifications(n1, n2)
   app.register!
   
-Alternately, you can call Growl.application and manipulate the attributes on the new application that way.
-Calling #application will automatically register it for you.
+Alternately, you can call Growl.application and set the attributes of the new application in a block.
+Calling #application will automatically register the application for you.
   
-  app = Growl.application do |growl|
-    growl.name = "My Awesome Ruby Application"
-    growl.image_path = "~/path/to/some/image"
-    growl.notification do |note|
-      note.name = "Process Complete!"
+  app = Growl.application do |a|
+    a.name = "My Awesome Ruby Application"
+    a.image_path = "~/path/to/some/image"
+    a.notification do |n|
+      n.name = "Process Complete!"
     end
-    growl.notification do |note|
-      note.name = "Process Interrupted!"
+    a.notification do |n|
+      n.name = "Process Interrupted!"
     end
   end
   
@@ -96,8 +96,8 @@ This will register the application with Growl. Building and registering an appli
 
 === Posting notifications from a registered application
 
-To post notifications, call notify_by_name on the Application instance and pass it a name that you defined when registering of the notification you want. Make sure both the application and the name of the notification you want have both been registered or else nothing will happen.
+To post notifications, call notify on the Application instance and pass it a name that you defined when registering of the notification you want. Make sure both the application and the name of the notification you want have both been registered or else nothing will happen.
 
-  app.notify_by_name("Process Complete")
+  app.notify("Process Complete")
     
 See Growl::Application for full details on building and registering applications and see Growl::Notification for details on building notifications and modifying their attributes when posting.

@@ -48,12 +48,10 @@ module Growl
       @all_notifications.each(&block)
     end
     
-    PROTECTED_ATTRIBUTES = [:registered, :registerable, :all_notifications, :default_notifications]
+    PROTECTED_ATTRIBUTES = [:all_notifications, :default_notifications]
     REQUIRED_ATTRIBUTE_NAMES = [:name, :icon, :all_notifications, :default_notifications]
     attr_accessor :name
-    attr_reader   :icon, :registered, :all_notifications, :default_notifications, :registerable
-    alias :registered?    :registered
-    alias :registerable?  :registerable
+    attr_reader   :icon, :all_notifications, :default_notifications
     
     # Setter for @icon; expects a OSX::NSImage object as an argument.
     def image=(img)
@@ -88,81 +86,41 @@ module Growl
     
     # Searches this applications all-notifications list for a notification of the given
     # name and posts it. You can pass a hash of overrides that get sent to the post method.
-    def notify_by_name(name, overrides = {})
-      notification = detect {|n| n[:name] == name}
+    def post(name, overrides = {})
+      notification = get_notification_by_name(name)
       notification.post(overrides) if notification
     end
-    alias :post_by_name :notify_by_name
-    
-    # Posts the notification at the given index within this application's all-notifications
-    # list. Can pass :first, :last, or :random to post the first, the last, or a random
-    # notification, should you ever want to. You can pass a hash of overrides that get sent to
-    # the post method on that notification.
-    def notify_by_index(index_or_symbol, overrides = {})
-      if index_or_symbol.is_a?(Symbol)
-        index = case index_or_symbol
-                when :first   then 0
-                when :last    then -1
-                when :random  then rand(self.all_notifications.size)
-                end
-        notification = all_notifications[index]
-        notification.post(overrides) if notification
-      end
+    alias :notify :post
+
+    # Returns the notification with the given name from this application's all_notifications
+    # list, or nil if it isn't found.
+    def get_notification_by_name(notification_name)
+      detect {|n| n.name == notification_name}
     end
-    alias :post_by_index :notify_by_index
-   
-    # Returns the notification in this application's all_notifications with the given name, or creates
-    # a new one with the given name if one wasn't found.
-    #
-    # Note that creating a new notification this way does not inform Growl about it (call register!
-    # to do that), so attempting to post that notification will fail until the application is
-    # (re)registered.
-    def [](name_or_index)
-      if name_or_index.is_a?(String)
-        msg = detect { |n| n.name == name_or_index }
-      elsif name.is_a?(Integer)
-        msg = @all_notifications[name_or_index]
-      end
-      return msg
-    end
+    alias :[] :get_notification_by_name
     
     # Creates a new Growl::Notification instance, sets self to that instance's parent application
     # (which defines certain defaults for that notification, such as application name and icon),
     # yields that new notification to the supplied block, and then adds it to this application's
     # all notifications list. Returns the newly created notification object.
     # 
-    # This is a less compact yet more overt way to create notifications for your applications.
-    # For example, you could use new_notification and pass attributes as a hash:
-    #
-    #   app = Growl::Application.new
-    #   app.new_notification(:title => "Process Complete", :message => "Your process has finished.", ...)
-    #
-    # or use build_notification to set attributes using the setter methods in a block syntax, which
-    # some people find more appealing or easier to understand:
-    #
     #   app = Growl::Application.new
     #   app.notification do |note|
     #     note.title = "Process Complete"
     #     note.message = "Your process has finished."
     #     ...
     #   end
-    #
-    # See also new_notification for alternate syntax.
     def notification
       returning(Growl::Notification.new(self)) do |note|
         yield note
-        add_notifications note
+        add_notification note
       end
     end
     
     # Add the notification (as a Growl::Notification object) and adds it to this application's
-    # @all_notifications and @default_notifications. Returns nil on failure (if the notification
-    # already existed), else returns the notification.
+    # @all_notifications and @default_notifications. Returns the new @all_notifications list.
     #
-    # Adds this application as the Notification's @parent_application, effectively stealing it
-    # from the previous parent (if any).
-    #
-    # Aliased as add_message.
+    # Aliased as add_notification.
     def add_notifications(*notifications)
       @all_notifications ||= []
       notifications.each do |notification|
@@ -173,41 +131,47 @@ module Growl
       end
       return @all_notifications
     end
-    alias :add_messages :add_notifications
+    alias :add_notification :add_notifications
     
     # Removes the notification from this application's @all_notifications list. Also, naturally,
-    # removes it from the @default_notifications. Returns the removed notification, or nil if it
-    # wasn't found.
+    # removes it from the @default_notifications. Returns the new @all_notifications list.
     #
-    # Aliased as remove_message.
-    def remove_notification(notification)
-      self.disable_notification(notification)
-      @all_notifications.delete(notification)
-    end
-    alias :remove_message :remove_notification
-    
-    # Adds the notification to this application's @default_notifications. Returns nil on failure
-    # (if the notification was already in defaults, or it was not in @all_notifications).
-    #
-    # Aliased as enable_message.
-    def enable_notification(notification)
-      @default_notifications ||= []
-      if @all_notifications.include?(notification) && !@default_notifications.include?(notification)
-        @default_notifications << notification
-      else
-        return nil
+    # Aliased as remove_notification.
+    def remove_notifications(*notifications)
+      notifications.each do |notification|
+        self.disable_notification(notification)
+        @all_notifications.delete(notification)
       end
+      return @all_notifications
     end
-    alias :enable_message :enable_notification
+    alias :remove_notification :remove_notifications
+    
+    # Adds the notification to this application's @default_notifications. Returns the new
+    # @default_notifications list.
+    #
+    # Aliased as enable_notification.
+    def enable_notifications(*notifications)
+      @default_notifications ||= []
+      notifications.each do |notification|
+        if @all_notifications.include?(notification) && !@default_notifications.include?(notification)
+          @default_notifications << notification
+        end
+      end
+      return @default_notifications
+    end
+    alias :enable_notification :enable_notifications
     
     # Removes the notification from this application's @default_notifications; the notification
-    # remains in @all_notifications. Returns the deleted notification, or nil if it wasn't found.
+    # remains in @all_notifications. Returns the new @default_notifications list.
     #
-    # Aliased as disable_message.
-    def disable_notification(notification)
-      @default_notifications.delete(notification)
+    # Aliased as disable_notification.
+    def disable_notifications(*notifications)
+      notifications.each do |notification|
+        @default_notifications.delete(notification)
+      end
+      return @default_notifications
     end
-    alias :disable_message :disable_notification
+    alias :disable_notification :disable_notifications
     
     # Sets the attributes on this application from a supplied hash. Used internally for initialize,
     # but could also be used publically to set multiple attributes at once.
@@ -215,15 +179,16 @@ module Growl
     # When finished, checks to make sure all required attributes are not nil, and raises a
     # Growl::GrowlApplicationError if any are missing. Returns true on success.
     def set_attributes!(attributes)
-      @name                   =   attributes[:name]
-      @all_notifications      =   add_notifications(attributes[:notifications]) if attributes[:notifications]
-      if attributes[:disabled_notifications] && attributes[:disabled_notifications].is_a?(Array)
-        @default_notifications  =   @all_notifications - attributes[:disabled_notifications]
+      defaults = {:name => "GrowlNotify", :notifications => []}
+      attributes = defaults.merge(attributes)
+      @name                  =   attributes[:name]
+      unless attributes[:notifications].empty?
+        @all_notifications   =   add_notifications(attributes[:notifications])
       else
-        @default_notifications  =   @all_notifications
+        @all_notifications   = []
       end
-      @icon                   =   extract_image_from(attributes)
-      @registerable           =   check_for_missing_attributes
+      @default_notifications =   @all_notifications
+      @icon                  =   extract_image_from(attributes)
       return self
     end
             
@@ -233,6 +198,15 @@ module Growl
       return self
     end
     
+    # Checks to make sure all required attributes are not nil. If this method returns true, the application
+    # has all the attributes it needs to be registered correctly.
+    def registerable?
+      missing_attributes = REQUIRED_ATTRIBUTE_NAMES.any? do |name|
+        self.instance_variable_get(:"@#{name}").nil?
+      end
+      return !missing_attributes
+    end
+
     # Registers this application with Growl.
     #
     # After registration, you'll be able to open the Growl Preference Pane and set the desired behavior for
@@ -248,26 +222,13 @@ module Growl
     # simply get rewritten).
     def register!
       registration_data = {"ApplicationName"      => @name,
-                           "AllNotifications"     => @all_notifications.collect {|n| n[:name]},
-                           "DefaultNotifications" => @default_notifications.collect {|n| n[:name]},
+                           "AllNotifications"     => @all_notifications.collect {|n| n.name},
+                           "DefaultNotifications" => @default_notifications.collect {|n| n.name},
                            "ApplicationIcon"      => @icon.TIFFRepresentation}
       ns_dict = OSX::NSDictionary.dictionaryWithDictionary(registration_data)
       ns_note_center = OSX::NSDistributedNotificationCenter.defaultCenter
       ns_name = OSX::NSString.stringWithString("GrowlApplicationRegistrationNotification")
       ns_note_center.postNotificationName_object_userInfo_deliverImmediately_(ns_name, nil, ns_dict, true)
-      @registered = true
     end
-    
-    protected    
-
-    # Checks to make sure all required attributes are not nil. If this method returns true, the application
-    # has all the attributes it needs to be registered correctly.
-    def check_for_missing_attributes
-      missing_attributes = REQUIRED_ATTRIBUTE_NAMES.collect do |name|
-        name if self.instance_variable_get(:"@#{name}").nil?
-      end.compact
-      return !missing_attributes.empty?
-    end
-
   end
 end

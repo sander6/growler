@@ -66,13 +66,11 @@ module Growl
     def application
       application = returning(Growl::Application.new) { |a| yield(a) }
       returning application do |a|
-        if a.kind_of?(Growl::Application)
-          a.register! if a.registerable?
-          # ... more stuff will eventually go here.
-        end
+        a.register! if a.registerable?
+        # ... more stuff will eventually go here.
       end
     end
-
+    
     # Pass-through name-setter. Returns self so that the pass-through methods can be chained.
     # Note that the name of this notification must be registered with Growl before it can
     # be posted.
