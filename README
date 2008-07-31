@@ -32,7 +32,8 @@ Or cloned from the git repository and installed from local source.
 
   $ git clone git://github.com/sander6/growler.git
   $ cd growler
-  $ gem install ./growler-[version].gem
+  $ rake gem
+  $ gem install ./pkg/growler-[version].gem
 
 --------------------------------------------------
 
