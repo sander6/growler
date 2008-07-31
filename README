@@ -4,15 +4,17 @@ Growler is a Ruby utility for posting notifications and registering applications
 
 == Requirements
 
-Growler is compatible with Growl versions >= 1.1.2; versions as old a 0.6 might work, but haven't been tested.
+Growler is compatible with Growl versions >= 1.1.2; versions as old as 0.6 might work, but haven't been tested.
 
-Growler can obviously only post notifications on Mac OS X platforms (>=10.4). Network functionality is planned to allow notifications to be sent FROM non-Mac platforms, but the end host must obviously be running Mac OS X and have the Growl Framework installed.
+Growler can obviously only post notifications on Mac OS X platforms (>=10.4). Network functionality is planned to allow notifications to be sent FROM non-Mac platforms, but the end host must obviously be running Mac OS X and have Growl installed.
 
-Growler requires RubyCocoa for application registration. There seems to be no gem for it, but if you have MacPorts, RubyCocoa can be installed with simply
+Growler requires RubyCocoa version >= 0.13.1. RubyCocoa 0.13.1 is included with Leopard.
+
+If your system is pre-Leopard, you'll have to install RubyCocoa. There seems to be no gem for it, but if you have MacPorts, RubyCocoa can be installed with simply
 
   $ sudo port install rb-cocoa
 
-Binaries or source code are available from the RubyCocoa SourceForge page (http://sourceforge.net/project/showfiles.php?group_id=44114).
+Alternately, binaries and source code are available from the RubyCocoa SourceForge page (http://sourceforge.net/project/showfiles.php?group_id=44114).
 
 RubyCocoa has its own set of requirements to build and use. Read about them at the RubyCocoa project page http://rubycocoa.sourceforge.net/GettingStarted.
 
@@ -28,7 +30,7 @@ Growler can be installed via RubyGems.
   
 Or cloned from the git repository and installed from local source.
 
-  $ git clone git://github.com/PLACEHOLDER/growler.git
+  $ git clone git://github.com/sander6/growler.git
   $ cd growler
   $ gem install ./growler-[version].gem
 
@@ -46,11 +48,19 @@ Growler can be used in one of two ways:
 
 === Simple notifications
 
-Sending "simple" notifications is mediated through methods on the Growl module itself. The Growl module wraps the growlnotify command line utility. To use, set your message arguments as instance variable on the Growl module, then call Growl.post.
+Sending "simple" notifications is mediated through methods on the Growl module itself. The Growl module wraps the growlnotify command line utility. To use, call Growl.post and pass a hash of message attributes:
 
-  Growl[:title] = "Process Completed"
-  Growl[:message] = "My work here is done."
-  Growl.post
+  Growl.post(:title => "Process Complete", :message => "My work here is done.", :sticky => true)
+  
+If you are going to send multiple similar messages, you can set defaults as instance variable on the Growl module. When you call Growl.post, your defaults will be merged with the hash you send.
+
+  Growl.title = "Process Complete"
+  Growl.sticky = true
+  Growl.post(:message => "Time to go home.")
+  
+Alternately, you can use the similarly named pass-through methods to do the same thing on one line:
+
+  Growl.title("Process Complete").message("My work here is done.").sticky(true).post
 
 See the Growl module for a full list of options and usage instructions.
 
@@ -61,16 +71,32 @@ Growl::Application objects define applications registered with Growl, specifical
 To create and register an application, instantiate a new application object, pass the attributes you want to set to it, create some notifications for it, and then call register!.
 
   app = Growl::Application.new
-  app[:name] = "My Awesome Ruby Application"
+  app.name = "My Awesome Ruby Application"
   n1 = Growl::Notification.new(...)
   n2 = Growl::Notification.new(...)
   app.add_notifications(n1, n2)
   app.register!
   
+Alternately, you can call Growl.application and manipulate the attributes on the new application that way.
+Calling #application will automatically register it for you.
+  
+  app = Growl.application do |growl|
+    growl.name = "My Awesome Ruby Application"
+    growl.image_path = "~/path/to/some/image"
+    growl.notification do |note|
+      note.name = "Process Complete!"
+    end
+    growl.notification do |note|
+      note.name = "Process Interrupted!"
+    end
+  end
+  
 This will register the application with Growl. Building and registering an application with Growl allows you much more control and flexibility in the display of your notifications; after registration you can then open the Growl preference pane and set display options for each of that application's notifications, such as the display style, screen position, and priority. Unfortunately, there is no way to script these settings; it's up to your end-users to set fancy display styles for themselves.
 
-To post notifications, call notify_by_name on the Application instance and pass it a name that you defined when registering of the notification you want.
+=== Posting notifications from a registered application
 
-  app.notify_by_name("Process Completed")
-  
-See Growl::Application for full details on building and registering applications and see Growl::Notification for details on building notifications.
+To post notifications, call notify_by_name on the Application instance and pass it a name that you defined when registering of the notification you want. Make sure both the application and the name of the notification you want have both been registered or else nothing will happen.
+
+  app.notify_by_name("Process Complete")
+    
+See Growl::Application for full details on building and registering applications and see Growl::Notification for details on building notifications and modifying their attributes when posting.
