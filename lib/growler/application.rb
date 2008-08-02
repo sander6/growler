@@ -38,21 +38,128 @@ module Growl
   #   growler["Finished Processing"].post
   #
   # Growl::Application also includes the Enumerable module to iterate over notifications.
-  class Application
+  class Application < OSX::NSObject
     include Growl::ImageExtractor
     include Growl::Returning
     include Enumerable
+    
+    PROTECTED_ATTRIBUTES = [:all_notifications, :default_notifications, :pid, :registered]
+    REQUIRED_ATTRIBUTE_NAMES = [:name, :icon, :all_notifications, :default_notifications]
+    attr_accessor :name
+    attr_reader   :icon, :all_notifications, :default_notifications, :pid, :nsdnc_identifier, :registered
+    alias :registered? :registered
+
+    # I'll admit that I don't fully understand this line, but it seems like it's here to ensure
+    # that you're always talking to the same object instance whenever callbacks are flying
+    # back and forth.
+    # @application = OSX::NSApplication.sharedApplication
+    
+
+    # Creates a new Growl::Application instance.
+    def initialize(attributes = {})
+      # self.set_attributes!(attributes)
+      @application = OSX::NSApplication.sharedApplication
+      @pid = OSX::NSProcessInfo.processInfo.processIdentifier
+      return self
+    end
+
+    # Registers this application with Growl (if it has all required attributes, as checked by registerable?).
+    # Returns true if registration was attempted, or false if it wasn't. Tapping into Objective-C from Ruby
+    # is pretty dark magic, so a return value of true doesn't guarantee that everything will work.
+    #
+    # After registration, you'll be able to open the Growl Preference Pane and set the desired behavior for
+    # notifications from this application, such as default display styles (which I believe is impossible
+    # to do via scripting).
+    #
+    # It's important to note that attempting to post a notification (i.e. calling post on a Growl::Notification
+    # instance) will not work unless that notification is from a registered application and that notification's
+    # name is in that application's all-notifications list.
+    #
+    # Therefore, it's best to register! your application after setting all your attributes and defining
+    # all your messages. However, there's no downside to registering an application multiple times: it
+    # simply get rewritten (note that the notification lists get totally rewritten and not merged).
+    def register!
+      if registerable?
+        registration_data = {"ApplicationName"      => @name,
+                             "AllNotifications"     => @all_notifications.collect {|n| n.name},
+                             "DefaultNotifications" => @default_notifications.collect {|n| n.name},
+                             "ApplicationIcon"      => @icon.TIFFRepresentation}
+        ns_dict = OSX::NSDictionary.dictionaryWithDictionary(registration_data)
+        ns_note_center = OSX::NSDistributedNotificationCenter.defaultCenter
+        ns_name = OSX::NSString.stringWithString("GrowlApplicationRegistrationNotification")
+        ns_note_center.postNotificationName_object_userInfo_deliverImmediately_(ns_name, nil, ns_dict, true)
+      end
+      @registered = registerable?
+      if registered?
+        Growl.post(:title => "#{@name} Registered with Growl!",
+                   :message => "#{@name} has been successfully registered.",
+                   :image => @icon)
+     end
+     return @registered
+    end
+
+    def observe!
+      nsdnc = OSX::NSDistributedNotificationCenter.defaultCenter
+      nsdnc.addObserver_selector_name_object(self, "ready:", nsdnc_identifier_for(:ready), nil)
+      nsdnc.addObserver_selector_name_object(self, "clicked:", nsdnc_identifier_for(:clicked), nil)
+      nsdnc.addObserver_selector_name_object(self, "timed_out:", nsdnc_identifier_for(:timed_out), nil)
+    end
+    
+    # When (or if) this application receives the GrowlIsReady event, it will invoke this methods
+    # and register itself with Growl.
+    def ready(return_data)
+      register! unless registered?
+    end
+    
+    # When a notification that has a callback is clicked, this application receives a message,
+    # looks through its @all_notifications for a Notification object of the same name, then
+    # calls that Notification's callback.
+    # Since callbacks are Notification-specific, you can have different behavior depending on
+    # what kind of notification was clicked.
+    def clicked(return_data)
+      get_notification_from_return_data(return_data).clicked_callback.call
+    end
+    
+    def timed_out(return_data)
+      get_notification_from_return_data(return_data).timed_out_callback.call
+    end
+    
+    # --
+    # Sets the attributes on this application from a supplied hash. Used internally for initialize,
+    # but could also be used publically to set multiple attributes at once.
+    #
+    # When finished, checks to make sure all required attributes are not nil, and raises a
+    # Growl::GrowlApplicationError if any are missing. Returns true on success.
+    # def set_attributes!(attributes)
+    #   defaults = {:name => "GrowlNotify", :notifications => []}
+    #   attributes = defaults.merge(attributes)
+    #   @name                  = attributes[:name]
+    #   unless attributes[:notifications].empty?
+    #     @all_notifications   = add_notifications(attributes[:notifications])
+    #   else
+    #     @all_notifications   = []
+    #   end
+    #   @default_notifications = @all_notifications
+    #   @icon                  = extract_image_from(attributes)
+    #   return self
+    # end
+    # ++
+
+    # Allows message passing back to this program from OS X; the downside is that it completely
+    # locks this thread in a wait-loop. Usability at it's best, it seems.
+    def start!
+      OSX::NSApp.run
+    end
+    
+    def stop!
+      OSX::NSApp.stop(nil)
+    end
 
     # Growl::Application includes the Enumerable module to iterate over its notifications.
     def each(&block)
       @all_notifications.each(&block)
     end
-    
-    PROTECTED_ATTRIBUTES = [:all_notifications, :default_notifications]
-    REQUIRED_ATTRIBUTE_NAMES = [:name, :icon, :all_notifications, :default_notifications]
-    attr_accessor :name
-    attr_reader   :icon, :all_notifications, :default_notifications
-    
+       
     # Setter for @icon; expects a OSX::NSImage object as an argument.
     def image=(img)
       @icon = img
@@ -173,31 +280,6 @@ module Growl
     end
     alias :disable_notification :disable_notifications
     
-    # Sets the attributes on this application from a supplied hash. Used internally for initialize,
-    # but could also be used publically to set multiple attributes at once.
-    #
-    # When finished, checks to make sure all required attributes are not nil, and raises a
-    # Growl::GrowlApplicationError if any are missing. Returns true on success.
-    def set_attributes!(attributes)
-      defaults = {:name => "GrowlNotify", :notifications => []}
-      attributes = defaults.merge(attributes)
-      @name                  =   attributes[:name]
-      unless attributes[:notifications].empty?
-        @all_notifications   =   add_notifications(attributes[:notifications])
-      else
-        @all_notifications   = []
-      end
-      @default_notifications =   @all_notifications
-      @icon                  =   extract_image_from(attributes)
-      return self
-    end
-            
-    # Creates a new Growl::Application instance with attributes supplied by a hash.
-    def initialize(attributes = {})
-      self.set_attributes!(attributes)
-      return self
-    end
-    
     # Checks to make sure all required attributes are not nil. If this method returns true, the application
     # has all the attributes it needs to be registered correctly.
     def registerable?
@@ -206,29 +288,19 @@ module Growl
       end
       return !missing_attributes
     end
+      
+    private
 
-    # Registers this application with Growl.
-    #
-    # After registration, you'll be able to open the Growl Preference Pane and set the desired behavior for
-    # notifications from this application, such as default display styles (which I believe is impossible
-    # to do via scripting).
-    #
-    # It's important to note that attempting to post a notification (i.e. calling post on a Growl::Notification
-    # instance) will not work unless that notification is from a registered application and that notification's
-    # name is in that application's all-notifications list.
-    #
-    # Therefore, it's best to register! your application after setting all your attributes and defining
-    # all your messages. However, there's no downside to registering an application multiple times (it
-    # simply get rewritten).
-    def register!
-      registration_data = {"ApplicationName"      => @name,
-                           "AllNotifications"     => @all_notifications.collect {|n| n.name},
-                           "DefaultNotifications" => @default_notifications.collect {|n| n.name},
-                           "ApplicationIcon"      => @icon.TIFFRepresentation}
-      ns_dict = OSX::NSDictionary.dictionaryWithDictionary(registration_data)
-      ns_note_center = OSX::NSDistributedNotificationCenter.defaultCenter
-      ns_name = OSX::NSString.stringWithString("GrowlApplicationRegistrationNotification")
-      ns_note_center.postNotificationName_object_userInfo_deliverImmediately_(ns_name, nil, ns_dict, true)
+    def get_notification_from_return_data(return_data)
+      get_notification_by_name(return_data.userInfo[Growl::GROWL_KEY_CLICKED_CONTEXT].to_s)
+    end
+    
+    def nsdnc_identifier_for(context)
+      case context
+      when :ready then "#{@name}-#{@pid}-#{Growl::GROWL_IS_READY}"
+      when :clicked then "#{@name}-#{@pid}-#{Growl::GROWL_NOTIFICATION_CLICKED}"
+      when :timed_out then "#{@name}-#{@pid}-#{Growl::GROWL_NOTIFICATION_TIMED_OUT}"
+      end
     end
   end
 end

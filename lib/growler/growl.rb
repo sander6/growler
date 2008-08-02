@@ -49,6 +49,10 @@
 # at all is debateable. Currently, I have absolutely no clue what 'progress' is supposed to do.
 
 module Growl
+  GROWL_IS_READY = "Growl is ready."
+  GROWL_NOTIFICATION_CLICKED = "GrowlClicked!"
+  GROWL_NOTIFICATION_TIMED_OUT = "GrowlTimedOut!"
+  GROWL_KEY_CLICKED_CONTEXT = "ClickedContext"
   
   ATTR_NAMES = [:message, :title, :sticky, :icon, :password, :host, :name, :path, :app_name, :app_icon, :icon_path, :image, :priority, :udp, :auth, :crypt, :wait, :port, :progress]
   ATTR_NAMES.each { |a| attr_accessor a }
@@ -66,8 +70,9 @@ module Growl
     def application
       application = returning(Growl::Application.new) { |a| yield(a) }
       returning application do |a|
-        a.register! if a.registerable?
-        # ... more stuff will eventually go here.
+        a.register!
+        a.observe!
+        # ... some other stuff might eventually go here.
       end
     end
     
