@@ -126,6 +126,7 @@ module Growl
       notification.clicked_callback.call if notification.has_callback?(:clicked)
     end
     alias :growlNotificationWasClicked :clicked
+
     
     # When a notification times out, Growl will notify this application with the name of that 
     # notification and pass it to the timed_out method. The application will search its
@@ -137,6 +138,7 @@ module Growl
       notification.timed_out_callback.call if notification.has_callback?(:timed_out)
     end
     alias :growlNotificationTimedOut :timed_out
+
 
     # Allows message passing back to this program from OS X; the downside is that it completely
     # locks this thread in a wait-loop. Usability at its best, it seems.

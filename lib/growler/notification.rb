@@ -25,9 +25,6 @@ module Growl
       if @parent && @parent.is_a?(Growl::Application)
         default_app_name = @parent.name
         @pid = @parent.pid if @parent.pid
-        # @ready_callback = parent.find_callback_for(:ready)
-        # @click_callback = parent.find_callback_for(:click)
-        # @timeout_callback = parent.find_callback_for(:timeout)
       else
         default_app_name = "growlnotify"
       end
