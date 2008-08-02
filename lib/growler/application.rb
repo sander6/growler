@@ -53,10 +53,19 @@ module Growl
     # Creates a new Growl::Application instance.
     def initialize
       @application = OSX::NSApplication.sharedApplication
+      @application.setDelegate(self)
       @pid = OSX::NSProcessInfo.processInfo.processIdentifier
       @all_notifications = []
       @default_notifications = []
       return self
+    end
+
+    def applicationDidFinishLaunching(sender)
+      puts "Something wonderful happened: the application did finish launching."
+    end
+    
+    def applicationWillTerminate(notification)
+      puts "Bye."
     end
 
     # Registers this application with Growl (if it has all required attributes, as checked by registerable?).
