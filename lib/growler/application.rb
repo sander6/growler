@@ -1,7 +1,7 @@
 require 'osx/cocoa'
 
 module Growl
-  
+
   # A Growl::Application instance holds information about your program (the one you're using Growler
   # with) and makes registering your application with Growl easy. The advantages of registering your
   # application are that your users can define custom display behavior for your application and its
@@ -11,7 +11,7 @@ module Growl
   # application (unless, of course, you choose to masquerade the Growl module as some other application;
   # see Growl module documentation for details).
   #
-  # Growl::Applications can be built and registered by calling Growl.build_application and passing it
+  # Growl::Applications can be built and registered by calling Growl.application and passing it
   # a block defining the attributes. There are two required attributes, @name and @icon. @name can be
   # set directly with the name= setter method, but Growl is expecting @icon to be an NSConcreteData
   # object. The methods on applications allow you to set this icon with the same ease as you would
@@ -28,10 +28,11 @@ module Growl
   #     end
   #   end
   #
-  # Using build_application will automatically register your application with Growl. There is no harm
-  # or significant load associated with reregistering an application. Therefore, defining this block
-  # in some part of your application where it will always be initialized will make sure that your
-  # application is registered and ready to deliver notifications each time your application runs.
+  # Using application will automatically register your application with Growl and tell the Notification
+  # Center to start observing it for callbacks. There is no harm or significant load associated with
+  # reregistering an application. Therefore, defining this block in some part of your application where
+  # it will always be initialized will make sure that your application is registered and ready to deliver
+  # notifications each time your application runs.
   #
   # An example of posting an application's notification:
   #
@@ -48,13 +49,7 @@ module Growl
     attr_accessor :name
     attr_reader   :icon, :all_notifications, :default_notifications, :pid, :nsdnc_identifier, :registered
     alias :registered? :registered
-
-    # I'll admit that I don't fully understand this line, but it seems like it's here to ensure
-    # that you're always talking to the same object instance whenever callbacks are flying
-    # back and forth.
-    # @application = OSX::NSApplication.sharedApplication
     
-
     # Creates a new Growl::Application instance.
     def initialize(attributes = {})
       # self.set_attributes!(attributes)
@@ -80,16 +75,16 @@ module Growl
     # simply get rewritten (note that the notification lists get totally rewritten and not merged).
     def register!
       if registerable?
-        registration_data = {"ApplicationName"      => @name,
-                             "AllNotifications"     => @all_notifications.collect {|n| n.name},
-                             "DefaultNotifications" => @default_notifications.collect {|n| n.name},
-                             "ApplicationIcon"      => @icon.TIFFRepresentation}
-        ns_dict = OSX::NSDictionary.dictionaryWithDictionary(registration_data)
+        ns_dict = build_registration_dictionary
         ns_note_center = OSX::NSDistributedNotificationCenter.defaultCenter
         ns_name = OSX::NSString.stringWithString("GrowlApplicationRegistrationNotification")
         ns_note_center.postNotificationName_object_userInfo_deliverImmediately_(ns_name, nil, ns_dict, true)
       end
       @registered = registerable?
+    end
+    
+    def set_as_delegate!
+      OSX::GrowlApplicationBridge.setGrowlDelegate(self)
     end
 
     def observe!
@@ -104,6 +99,7 @@ module Growl
     def ready(return_data)
       register! unless registered?
     end
+    alias :growlIsReady :ready
     
     # When a notification that has a callback is clicked, this application receives a message,
     # looks through its @all_notifications for a Notification object of the same name, then
@@ -113,10 +109,12 @@ module Growl
     def clicked(return_data)
       get_notification_from_return_data(return_data).clicked_callback.call
     end
+    alias :growlNotificationWasClicked :clicked
     
     def timed_out(return_data)
       get_notification_from_return_data(return_data).timed_out_callback.call
     end
+    alias :growlNotificationTimedOut :timed_out
     
     # --
     # Sets the attributes on this application from a supplied hash. Used internally for initialize,
@@ -157,6 +155,16 @@ module Growl
     # Setter for @icon; expects a OSX::NSImage object as an argument.
     def image=(img)
       @icon = img
+    end
+    
+    # Growl delegate method to get the name of this application.
+    def applicationNameForGrowl
+      @name
+    end
+    
+    # Growl delegate method to get the icon data of this application.
+    def applicationIconDataForGrowl
+      @icon.TIFFRepresentation if @icon && @icon.is_a?(OSX::NSImage)
     end
     
     # Setter for @icon. Takes a path to an image file and sets the default notification icon
@@ -282,11 +290,26 @@ module Growl
       end
       return !missing_attributes
     end
+    
+    def build_registration_dictionary
+      OSX::NSDictionary.dictionaryWithDictionary({
+        "ApplicationName"      => @name,
+        "ApplicationId"        => @pid,
+        "AllNotifications"     => @all_notifications.collect {|n| n.name},
+        "DefaultNotifications" => @default_notifications.collect {|n| n.name},
+        "ApplicationIcon"      => @icon.TIFFRepresentation
+      })
+    end
+    alias :registrationDictionaryForGrowl :build_registration_dictionary
       
     private
 
     def get_notification_from_return_data(return_data)
-      get_notification_by_name(return_data.userInfo[Growl::GROWL_KEY_CLICKED_CONTEXT].to_s)
+      if Growl.framework_loaded?
+        get_notification_by_name(return_data.to_ruby)
+      else
+        get_notification_by_name(return_data.userInfo[Growl::GROWL_KEY_CLICKED_CONTEXT].to_s)
+      end
     end
     
     def nsdnc_identifier_for(context)

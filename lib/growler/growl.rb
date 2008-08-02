@@ -71,11 +71,19 @@ module Growl
       application = returning(Growl::Application.new) { |a| yield(a) }
       returning application do |a|
         a.register!
-        a.observe!
-        # ... some other stuff might eventually go here.
+        # Setting the application as a GrowlApplicationBridgeDelegate allows it to talk to
+        # Growl directly, but if the framework isn't loaded, observe! will instruct the
+        # NSDistributedNotificationCenter to watch this application and assist in passing
+        # messages back and forth between it and Growl.
+        Growl.framework_loaded? ? a.set_as_delegate! : a.observe!
       end
     end
-    
+
+    # Returns true if the Growl.framework was found and loaded properly, false if not.
+    def framework_loaded?
+      @framework_loaded
+    end
+
     # Pass-through name-setter. Returns self so that the pass-through methods can be chained.
     # Note that the name of this notification must be registered with Growl before it can
     # be posted.
@@ -275,10 +283,22 @@ module Growl
       str << "-t '#{options[:title]}'"       if options[:title]
       str.join(" ")
     end
+    
+    def load_framework!
+      bundle_path = File.join(File.dirname(__FILE__), "..", "..", "ext", "Growl.framework")
+      framework = OSX::NSBundle.bundleWithPath(bundle_path)
+      if framework
+        framework.load
+        @framework_loaded = true
+      else
+        @framework_loaded = false
+      end
+    end
   end
   
   # Initialize the defaults.
   self.reset!
+  self.load_framework!
 
   # Default error for anything that goes wrong with a Growl::Application.
   class GrowlApplicationError < StandardError
