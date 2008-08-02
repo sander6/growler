@@ -98,6 +98,51 @@ This will register the application with Growl. Building and registering an appli
 
 To post notifications, call notify on the Application instance and pass it a name that you defined when registering of the notification you want. Make sure both the application and the name of the notification you want have both been registered or else nothing will happen.
 
-  app.notify("Process Complete")
+  app.post("Process Complete")
+  
+You can also refer to an application's notifications by name using the [] syntax.
+
+  app["Process Complete"].post
     
 See Growl::Application for full details on building and registering applications and see Growl::Notification for details on building notifications and modifying their attributes when posting.
+
+
+=== Building and using notifications
+
+Growler takes a significant turn from other Ruby Growl libraries in its application and notification handling. A Growl::Application object holds a library of Growl::Notification objects, which can have all their useful attributes set once and then simply called as needed, opposed to having to hand-roll the entire notification each time you want to post it.
+
+To build a notification for an application, call application.notification and set the attributes in block format.
+
+  app.notification do |note|
+    note.name = "Process Complete!"
+    note.message = "The process is complete!"
+    note.image_path = "./complete.png"
+  end
+
+'name' is the name under which this notification will be registered (you'll see it by this name in the drop-down list of notifications under this application in the Growl preference pane), and the name by which this application will fetch this notification object. 'name' is also the default title of the notification. You can set 'title' separately if you want, for instance, a simpler name to refer to this notification by but a more descriptive title.
+
+  app.notification do |note|
+    note.name = "Complete"
+    note.title = "Process is Totally Completed!"
+    ...
+  end
+  app["Complete"].post
+  
+The same icon helper methods that work with the Growl module will also work with setting the icon for a application or notification. By default, a notification inherits its icon from the application it belongs to.
+
+  app["Complete"].app_icon = "Mail"
+  
+The example above will use deep, dark magics to set the icon of the notification to the application icon of Mail.app. Yes, it works just like that.
+
+When calling post on a notification, you can pass a hash of overrides that will change its display behavior just that once without affecting its defaults. This is also useful for dynamic content.
+
+  app["Complete"].post(:sticky => true)             # posted with sticky
+  app["Complete"].post(:app_icon => "Address Book") # posted not sticky, but with new icon
+  app["Complete"].post                              # posted as normal
+
+
+=== Technical stuff
+
+Growl::Applications are NSObjects and conform to the GrowlApplicationBridgeDelegate protocol. Unlike other Growl libraries that bother the NSDistributedNotificationCenter each time they want to talk to Growl, Growler actually loads the Growl Framework, imports it into Ruby across the RubyCocoa bridge, and sets Growl::Applications up as delegates of the GrowlApplicationBridge. This cuts out a fair bit of longwinded Objective C methods as well as gives access to some of the methods of the GrowlApplicationBridge, such as methods to tell whether Growl is running or not.
+
+You can get at the bridge by calling Growl.application_bridge. If you want to see what it can do, you can unpack this gem and find a copy of the Growl framework in the ext directory, inside which is GrowlApplicationBridge.h that will tell you everything you need to know.

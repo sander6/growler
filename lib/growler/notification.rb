@@ -10,42 +10,11 @@ module Growl
     attr_reader :parent, :pid, :clicked_callback, :timed_out_callback
     alias :sticky? :sticky
    
-    
-    # Initializes a new Growl::Notification instance. Pass a Growl::Application object to act as
-    # this notification's "parent" and/or a hash of attributes for this notifications. Will set
-    # the following defaults if you don't specify them:
-    # * :app_name - name of the application passed as the parent, or "growlnotify"
-    # * :name - "Command-Line Growl Notification"
-    # * :image - icon of parent application, unless :image_path, :icon_path, :file_type, or :app_icon was also passed
-    # * :sticky - false
-    # * :message - ""
-    # * :title - ""
-    def initialize(*args)
-      attributes = args.last.is_a?(Hash) ? args.pop : {}
-      @parent = args[0]
-      if @parent && @parent.is_a?(Growl::Application)
-        default_app_name = @parent.name
-        @pid = @parent.pid if @parent.pid
-        # @ready_callback = parent.find_callback_for(:ready)
-        # @click_callback = parent.find_callback_for(:click)
-        # @timeout_callback = parent.find_callback_for(:timeout)
-      else
-        default_app_name = "growlnotify"
-      end
-      default_name = "Command-Line Growl Notification"
-      unless [:image_path, :icon_path, :file_type, :app_icon].any? {|k| attributes.has_key?(k)}
-        default_icon = @parent ? @parent.icon : nil
-      else
-        default_icon = nil
-      end
-      defaults = {:app_name => default_app_name,
-                  :name => default_name,
-                  :image => default_icon,
-                  :sticky => false,
-                  :priority => 0,
-                  :message => "",
-                  :title => ""}
-      self.set_attributes!(defaults.merge(attributes))
+    # Initializes a new Growl::Notification instance.
+    def initialize(parent)
+      @parent = parent
+      @name = @parent.name
+      @pid = @parent.pid if @parent.pid
     end
 
     # The name of the Growl::Application that this notification belongs to.
@@ -132,8 +101,41 @@ module Growl
     # having registered an application with that app_name having a (default) message of that name
     # will result in no message getting posted. This could possibly be useful to make one message
     # masquerade as if sent by a different program, should you ever want to.
-    def post(overrides = {}, &callback)
-      self.when_clicked(&callback) if block_given?
+    def post(overrides = {})
+      Growl.application_bridge.notifyWithDictionary(build_notification_data(overrides))
+    end
+    alias :notify :post
+
+    # Posts the message forcing :sticky => true.
+    def pin(overrides = {})
+      post(overrides.merge({:sticky => true}))
+    end
+    alias :stick :pin
+    
+    # Registers a callback to run when this notification is clicked.
+    # Pass a block of the desired behavior. For example:
+    # notification.when_clicked do
+    #   puts "Hooray! I got clicked!"
+    # end
+    def when_clicked(&block)
+      # @clicked_callback = Growl::Callback.new(self, &block)
+      @clicked_callback = block
+    end
+    
+    # Registered a callback to run when this notification times out.
+    # Arguably less useful than when_clicked.
+    def when_timed_out(&block)
+      # @timed_out_callback = Growl::Callback.new(self, &block)
+      @timed_out_callback = block
+    end
+    
+    def has_callback?(context)
+      !!instance_variable_get(:"@#{context}_callback")
+    end
+    
+    private
+
+    def build_notification_data(overrides = {})
       tmp_name      = overrides[:name]                       || @name      || ""
       tmp_app_name  = overrides[:app_name]                   || @app_name  || ""
       tmp_title     = overrides[:title]                      || @title     || ""
@@ -154,36 +156,8 @@ module Growl
       data.merge!({"ApplicationPID" => @pid}) if @pid
       data.merge!({"NotificationClickContext" => @name}) if @clicked_callback
       data.merge!({"NotificationTimedOutContext" => @name}) if @timed_out_callback
-      
-      attrs = OSX::NSDictionary.dictionaryWithDictionary(data)
-      ns_name = OSX::NSString.stringWithString("GrowlNotification")
-      nsdnc = OSX::NSDistributedNotificationCenter.defaultCenter
-      nsdnc.postNotificationName_object_userInfo_deliverImmediately_(ns_name, nil, attrs, true)
+      return OSX::NSDictionary.dictionaryWithDictionary(data)
     end
-    alias :notify :post
-
-    # Posts the message forcing :sticky => true.
-    def pin(overrides = {})
-      post(overrides.merge({:sticky => true}))
-    end
-    alias :stick :pin
-    
-    # Registers a callback to run when this notification is clicked.
-    # Pass a block of the desired behavior. For example:
-    # notification.when_clicked do
-    #   puts "Hooray! I got clicked!"
-    # end
-    def when_clicked(&block)
-      @clicked_callback = Growl::Callback.new(self, &block)
-    end
-    
-    # Registered a callback to run when this notification times out.
-    # Arguably less useful than when_clicked.
-    def when_timed_out(&block)
-      @timed_out_callback = Growl::Callback.new(self, &block)
-    end
-    
-    protected
     
     # Catch-all attribute setter. Used internally; use the other setters to set attributes, since
     # those will transform inputs into the correct types.

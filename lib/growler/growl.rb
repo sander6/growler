@@ -1,3 +1,5 @@
+require 'osx/cocoa'
+
 # For simple scripts it's easier to just send one-off notifications without going through the
 # rigmarole of setting configuration and registering the application. For the times when that
 # would be overkill, the Growl module itself can be used to send simple notifications.
@@ -49,10 +51,16 @@
 # at all is debateable. Currently, I have absolutely no clue what :progress is supposed to do.
 
 module Growl
-  GROWL_IS_READY = "Growl is ready."
+  # The various strings Growl uses to identify certain events. I didn't make these up.
+  GROWL_IS_READY = "Lend Me Some Sugar; I Am Your Neighbor!"
+  GROWL_PING = "Honey, Mind Taking Out The Trash"
+  GROWL_PONG = "What Do You Want From Me, Woman"
   GROWL_NOTIFICATION_CLICKED = "GrowlClicked!"
   GROWL_NOTIFICATION_TIMED_OUT = "GrowlTimedOut!"
   GROWL_KEY_CLICKED_CONTEXT = "ClickedContext"
+  
+  # Location of Growl.framework.
+  BUNDLE_PATH = File.join(File.dirname(__FILE__), "..", "..", "ext", "Growl.framework")
   
   ATTR_NAMES = [:message, :title, :sticky, :icon, :password, :host, :name, :path, :app_name, :app_icon, :icon_path, :image, :priority, :udp, :auth, :crypt, :wait, :port, :progress]
   ATTR_NAMES.each { |a| attr_accessor a }
@@ -60,6 +68,10 @@ module Growl
   class << self
     include Growl::PriorityExtractor
     include Growl::Returning
+
+    def application_bridge
+      OSX::GrowlApplicationBridge
+    end
 
     # Yields a new Growl::Application to the block you provide, then registers it when done.
     #
@@ -70,18 +82,9 @@ module Growl
     def application
       application = returning(Growl::Application.new) { |a| yield(a) }
       returning application do |a|
+        a.set_as_delegate!
         a.register!
-        # Setting the application as a GrowlApplicationBridgeDelegate allows it to talk to
-        # Growl directly, but if the framework isn't loaded, observe! will instruct the
-        # NSDistributedNotificationCenter to watch this application and assist in passing
-        # messages back and forth between it and Growl.
-        Growl.framework_loaded? ? a.set_as_delegate! : a.observe!
       end
-    end
-
-    # Returns true if the Growl.framework was found and loaded properly, false if not.
-    def framework_loaded?
-      @framework_loaded
     end
 
     # Pass-through name-setter. Returns self so that the pass-through methods can be chained.
@@ -238,6 +241,16 @@ module Growl
 
     protected
 
+    #
+    def is_installed?
+      application_bridge.isGrowlInstalled
+    end
+    
+    #
+    def is_running?
+      application_bridge.isGrowlRunning
+    end
+
     # Catch-all attribute setter, used internally. Massages data just like other
     # setters (for example, automatically appends ".app" to the name when setting
     # Growl.app_icon).
@@ -285,20 +298,24 @@ module Growl
     end
     
     def load_framework!
-      bundle_path = File.join(File.dirname(__FILE__), "..", "..", "ext", "Growl.framework")
-      framework = OSX::NSBundle.bundleWithPath(bundle_path)
+      framework = OSX::NSBundle.bundleWithPath(BUNDLE_PATH)
       if framework
         framework.load
-        @framework_loaded = true
       else
-        @framework_loaded = false
+        raise GrowlApplicationError, "The Growl Framework was not loaded. It could be missing."
       end
+    end
+    
+    def setup!
+      reset!
+      load_framework!
+      raise GrowlIsNotInstalled unless Growl.is_installed?
+      raise GrowlIsNotRunning unless Growl.is_running?
     end
   end
   
   # Initialize the defaults.
-  self.reset!
-  self.load_framework!
+  self.setup!
 
   # Default error for anything that goes wrong with a Growl::Application.
   class GrowlApplicationError < StandardError
@@ -306,5 +323,23 @@ module Growl
   
   # Default error for anything that goes wrong with a Growl::Notification.
   class GrowlMessageError < StandardError
+  end
+  
+  # Error raised when Growl isn't installed.
+  class GrowlIsNotInstalled < StandardError
+    def message
+      "Growl is not installed, rendering the whole point of the Growler gem rather silly."
+    end
+  end
+  
+  # Error raised when Growl is not currently running. In the process of creating a new application
+  # using Growl.application, the application is set as a GrowlApplicationBridgeDelegate, which
+  # nominally starts Growl; however, RubyCocoa has the nasty tendency to seg-fault unless Growl
+  # is already running anyway. In short, your program should crash horribly before you'll ever see
+  # this error.
+  class GrowlIsNotRunning < StandardError
+    def message
+      "Growl is not running. Please start Growl before using the Growler gem."
+    end
   end
 end

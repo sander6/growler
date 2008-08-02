@@ -46,15 +46,16 @@ module Growl
     
     PROTECTED_ATTRIBUTES = [:all_notifications, :default_notifications, :pid, :registered]
     REQUIRED_ATTRIBUTE_NAMES = [:name, :icon, :all_notifications, :default_notifications]
-    attr_accessor :name
+    attr_accessor :name, :ready_callback
     attr_reader   :icon, :all_notifications, :default_notifications, :pid, :nsdnc_identifier, :registered
     alias :registered? :registered
     
     # Creates a new Growl::Application instance.
-    def initialize(attributes = {})
-      # self.set_attributes!(attributes)
+    def initialize
       @application = OSX::NSApplication.sharedApplication
       @pid = OSX::NSProcessInfo.processInfo.processIdentifier
+      @all_notifications = []
+      @default_notifications = []
       return self
     end
 
@@ -74,32 +75,46 @@ module Growl
     # all your messages. However, there's no downside to registering an application multiple times: it
     # simply get rewritten (note that the notification lists get totally rewritten and not merged).
     def register!
-      if registerable?
-        ns_dict = build_registration_dictionary
-        ns_note_center = OSX::NSDistributedNotificationCenter.defaultCenter
-        ns_name = OSX::NSString.stringWithString("GrowlApplicationRegistrationNotification")
-        ns_note_center.postNotificationName_object_userInfo_deliverImmediately_(ns_name, nil, ns_dict, true)
-      end
+      Growl.application_bridge.registerWithDictionary(build_registration_dictionary) if registerable?
       @registered = registerable?
     end
     
+    # Sets this application as a GrowlApplicationBridgeDelegate, allowing it to communicate with Growl.
     def set_as_delegate!
-      OSX::GrowlApplicationBridge.setGrowlDelegate(self)
+      Growl.application_bridge.setGrowlDelegate(self)
     end
 
-    def observe!
-      nsdnc = OSX::NSDistributedNotificationCenter.defaultCenter
-      nsdnc.addObserver_selector_name_object(self, "ready:", nsdnc_identifier_for(:ready), nil)
-      nsdnc.addObserver_selector_name_object(self, "clicked:", nsdnc_identifier_for(:clicked), nil)
-      nsdnc.addObserver_selector_name_object(self, "timed_out:", nsdnc_identifier_for(:timed_out), nil)
-    end
+    # --
+    # def observe!
+    #   nsdnc = OSX::NSDistributedNotificationCenter.defaultCenter
+    #   nsdnc.addObserver_selector_name_object(self, "ready:", nsdnc_identifier_for(:ready), nil)
+    #   nsdnc.addObserver_selector_name_object(self, "clicked:", nsdnc_identifier_for(:clicked), nil)
+    #   nsdnc.addObserver_selector_name_object(self, "timed_out:", nsdnc_identifier_for(:timed_out), nil)
+    # end
+    # ++
     
     # When (or if) this application receives the GrowlIsReady event, it will invoke this method
     # and register itself with Growl.
     def ready(return_data)
       register! unless registered?
+      @ready_callback.call if @ready_callback
     end
     alias :growlIsReady :ready
+
+    # Registers a callback to run when this application receives the GrowlIsReady event, in
+    # addition to registering the application if it isn't already.
+    # For example, to post a notification when ready:
+    # application.on_ready do
+    #   post("Ready")
+    # end
+    #
+    # The GrowlIsReady event triggers if this application is running when Growl starts. However,
+    # most of the time starting up Growler while Growl is off causes RubyCocoa to seg-fault.
+    # Therefore this method is pretty useless right now, but when that gets fixed it'll start to
+    # mean something.
+    def on_ready(&block)
+      @ready_callback = block
+    end
     
     # When a notification that has a callback is clicked, this application receives a message,
     # looks through its @all_notifications for a Notification object of the same name, then
@@ -107,38 +122,24 @@ module Growl
     # Since callbacks are Notification-specific, you can have different behavior depending on
     # what kind of notification was clicked.
     def clicked(return_data)
-      get_notification_from_return_data(return_data).clicked_callback.call
+      notification = get_notification_by_name(return_data)
+      notification.clicked_callback.call if notification.has_callback?(:clicked)
     end
     alias :growlNotificationWasClicked :clicked
     
+    # When a notification times out, Growl will notify this application with the name of that 
+    # notification and pass it to the timed_out method. The application will search its
+    # @all_notifications list for that notification and run its timed_out_callback.
+    # Since callbacks are Notification-specific, you can have different behavior depending on
+    # what kind of notification was clicked.
     def timed_out(return_data)
-      get_notification_from_return_data(return_data).timed_out_callback.call
+      notification = get_notification_by_name(return_data)
+      notification.timed_out_callback.call if notification.has_callback?(:timed_out)
     end
     alias :growlNotificationTimedOut :timed_out
-    
-    # --
-    # Sets the attributes on this application from a supplied hash. Used internally for initialize,
-    # but could also be used publically to set multiple attributes at once.
-    #
-    # When finished, checks to make sure all required attributes are not nil, and raises a
-    # Growl::GrowlApplicationError if any are missing. Returns true on success.
-    # def set_attributes!(attributes)
-    #   defaults = {:name => "GrowlNotify", :notifications => []}
-    #   attributes = defaults.merge(attributes)
-    #   @name                  = attributes[:name]
-    #   unless attributes[:notifications].empty?
-    #     @all_notifications   = add_notifications(attributes[:notifications])
-    #   else
-    #     @all_notifications   = []
-    #   end
-    #   @default_notifications = @all_notifications
-    #   @icon                  = extract_image_from(attributes)
-    #   return self
-    # end
-    # ++
 
     # Allows message passing back to this program from OS X; the downside is that it completely
-    # locks this thread in a wait-loop. Usability at it's best, it seems.
+    # locks this thread in a wait-loop. Usability at its best, it seems.
     def start!
       OSX::NSApp.run
     end
@@ -305,11 +306,7 @@ module Growl
     private
 
     def get_notification_from_return_data(return_data)
-      if Growl.framework_loaded?
-        get_notification_by_name(return_data.to_ruby)
-      else
-        get_notification_by_name(return_data.userInfo[Growl::GROWL_KEY_CLICKED_CONTEXT].to_s)
-      end
+      get_notification_by_name(return_data.to_ruby)
     end
     
     def nsdnc_identifier_for(context)
