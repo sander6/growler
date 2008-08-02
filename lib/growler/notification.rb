@@ -10,11 +10,41 @@ module Growl
     attr_reader :parent, :pid, :clicked_callback, :timed_out_callback
     alias :sticky? :sticky
    
-    # Initializes a new Growl::Notification instance.
-    def initialize(parent)
-      @parent = parent
-      @name = @parent.name
-      @pid = @parent.pid if @parent.pid
+    # Initializes a new Growl::Notification instance. Pass a Growl::Application object to act as
+    # this notification's "parent" and/or a hash of attributes for this notifications. Will set
+    # the following defaults if you don't specify them:
+    # * :app_name - name of the application passed as the parent, or "growlnotify"
+    # * :name - "Command-Line Growl Notification"
+    # * :image - icon of parent application, unless :image_path, :icon_path, :file_type, or :app_icon was also passed
+    # * :sticky - false
+    # * :message - ""
+    # * :title - ""
+    def initialize(*args)
+      attributes = args.last.is_a?(Hash) ? args.pop : {}
+      @parent = args[0]
+      if @parent && @parent.is_a?(Growl::Application)
+        default_app_name = @parent.name
+        @pid = @parent.pid if @parent.pid
+        # @ready_callback = parent.find_callback_for(:ready)
+        # @click_callback = parent.find_callback_for(:click)
+        # @timeout_callback = parent.find_callback_for(:timeout)
+      else
+        default_app_name = "growlnotify"
+      end
+      default_name = "Command-Line Growl Notification"
+      unless [:image_path, :icon_path, :file_type, :app_icon].any? {|k| attributes.has_key?(k)}
+        default_icon = @parent ? @parent.icon : nil
+      else
+        default_icon = nil
+      end
+      defaults = {:app_name => default_app_name,
+                  :name => default_name,
+                  :image => default_icon,
+                  :sticky => false,
+                  :priority => 0,
+                  :message => "",
+                  :title => ""}
+      self.set_attributes!(defaults.merge(attributes))
     end
 
     # The name of the Growl::Application that this notification belongs to.
