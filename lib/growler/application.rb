@@ -90,12 +90,6 @@ module Growl
         ns_note_center.postNotificationName_object_userInfo_deliverImmediately_(ns_name, nil, ns_dict, true)
       end
       @registered = registerable?
-      if registered?
-        Growl.post(:title => "#{@name} Registered with Growl!",
-                   :message => "#{@name} has been successfully registered.",
-                   :image => @icon)
-     end
-     return @registered
     end
 
     def observe!
@@ -105,7 +99,7 @@ module Growl
       nsdnc.addObserver_selector_name_object(self, "timed_out:", nsdnc_identifier_for(:timed_out), nil)
     end
     
-    # When (or if) this application receives the GrowlIsReady event, it will invoke this methods
+    # When (or if) this application receives the GrowlIsReady event, it will invoke this method
     # and register itself with Growl.
     def ready(return_data)
       register! unless registered?

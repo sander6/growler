@@ -31,7 +31,7 @@
 # * :icon_path - path to a file whose icon will be used for this notification's icon.
 # * :image - path to an image file which should be used from this notificaiton's icon.
 # * :priority - sets the priority for this message. Pass either an integer between -2 and 2 or a priority name as a symbol (:very_low, :moderate, :normal, :high, :emergency). Default 0 (:normal).
-# * :udp - boolean; use UDP instead of DO to send remote notificaiton; currently not implemented.
+# * :udp - boolean; use UDP instead of DO to send remote notifications; currently not implemented.
 # * :port - UDP port for notifications; currently not implemented.
 # * :auth - digest algorithm for UDP authentication. Either :md5, :sha256, or :none. Default :md5. Currently not implemented.
 # * :crypt - boolean; whether or not to encrypt UDP notifications. Currently not implemented.
@@ -40,13 +40,13 @@
 #
 # Some things to be aware of:
 # 1. You can set the name of the application the Growl module posts as, but the notification won't show up unless that application has already been registered. The default application name is "growlnotify", so change those settings to alter how the Growl module's notifications appear. The same holds true for notification names.
-# 2. You cannot register the Growl module as an application. However, by setting the application name of the Growl module (Growl[:name] = name) to that of an already-registered application (either one you made using Growler or one from somewhere else), the notifications send by the module will inherit the settings for that application as defined in the Growl preference pane.
+# 2. You cannot register the Growl module as an application. However, by setting the application name of the Growl module (Growl[:name] = name) to that of an already-registered application (either one you made using Growler or one from somewhere else), the notifications sent by the module will inherit the settings for that application as defined in the Growl preference pane.
 # 3. There is a bug in Leopard (still persists in Leopard 10.5.3 and Growl 1.1.4) that causes many messages sent by growlnotify to be ignored. The workaround for this is to send network notifications to localhost. The Growl module does this hack automatically; however, you must check "Listen for incoming notifications" under the "Network" tab in the Growl preference pane for these notifications to show up.
 # 4. None of the attributes on the Growl module will affect anything concerning Application or Notification objects (unlike how Notifications default to inheriting certain attributes from their parent Application). Think of the module as just holding a single-shot notification.
 #
 # Currently, setting :udp, :auth, :crypt, :port, :progress or :wait does nothing.
 # Network functionality is planned for a later release, but the value of supporting :wait
-# at all is debateable. Currently, I have absolutely no clue what 'progress' is supposed to do.
+# at all is debateable. Currently, I have absolutely no clue what :progress is supposed to do.
 
 module Growl
   GROWL_IS_READY = "Growl is ready."
