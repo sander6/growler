@@ -41,31 +41,23 @@ module Growl
   # Growl::Application also includes the Enumerable module to iterate over notifications.
   class Application < OSX::NSObject
     include Growl::ImageExtractor
-    include Growl::Returning
+    # include Growl::ObjectExtensions
     include Enumerable
-    
-    PROTECTED_ATTRIBUTES = [:all_notifications, :default_notifications, :pid, :registered]
+
     REQUIRED_ATTRIBUTE_NAMES = [:name, :icon, :all_notifications, :default_notifications]
     attr_accessor :name, :ready_callback
-    attr_reader   :icon, :all_notifications, :default_notifications, :pid, :nsdnc_identifier, :registered
+    attr_reader :icon, :all_notifications, :default_notifications, :pid, :registered
     alias :registered? :registered
     
     # Creates a new Growl::Application instance.
-    def initialize
+    def initialize(attributes = {})
       @application = OSX::NSApplication.sharedApplication
-      @application.setDelegate(self)
+      # @application.setDelegate(self)
       @pid = OSX::NSProcessInfo.processInfo.processIdentifier
       @all_notifications = []
       @default_notifications = []
+      set_attributes!(attributes)
       return self
-    end
-
-    def applicationDidFinishLaunching(sender)
-      puts "Something wonderful happened: the application did finish launching."
-    end
-    
-    def applicationWillTerminate(notification)
-      puts "Bye."
     end
 
     # Registers this application with Growl (if it has all required attributes, as checked by registerable?).
@@ -297,10 +289,13 @@ module Growl
     # Checks to make sure all required attributes are not nil. If this method returns true, the application
     # has all the attributes it needs to be registered correctly.
     def registerable?
-      missing_attributes = REQUIRED_ATTRIBUTE_NAMES.any? do |name|
-        self.instance_variable_get(:"@#{name}").nil?
-      end
-      return !missing_attributes
+      # missing_attributes = REQUIRED_ATTRIBUTE_NAMES.any? do |name|
+      #   self.instance_variable_get(:"@#{name}").nil?
+      # end
+      # return !missing_attributes
+      
+      # See Object#to_proc for explanation of this crazy line here.
+      REQUIRED_ATTRIBUTE_NAMES.collect(&self).all?
     end
     
     def build_registration_dictionary

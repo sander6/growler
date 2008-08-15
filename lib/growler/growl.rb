@@ -67,7 +67,7 @@ module Growl
   
   class << self
     include Growl::PriorityExtractor
-    include Growl::Returning
+    # include Growl::ObjectExtensions
 
     def application_bridge
       OSX::GrowlApplicationBridge
@@ -79,86 +79,136 @@ module Growl
     # Growl:Application object as a delegate of the GrowlApplicationBridge. Setting up the
     # application this way will keep users from having to remember the byzantine registration
     # steps involved and just worry about setting their own application-specific settings.
-    def application
-      application = returning(Growl::Application.new) { |a| yield(a) }
+    def application(&block)
+      application = returning(Growl::Application.new) {|a| yield a}
       returning application do |a|
         a.set_as_delegate!
         a.register!
       end
     end
 
-    # Pass-through name-setter. Returns self so that the pass-through methods can be chained.
+    # Dual-use getter/setter. Without an argument, returns @name. With an argument, acts as
+    # pass-through @name-setter. Returns self so that the pass-through methods can be chained.
     # Note that the name of this notification must be registered with Growl before it can
     # be posted.
-    def name(name)
-      @name = name
-      self
+    def name(str = nil)
+      if str
+        @name = str
+        self
+      else
+        @name
+      end
     end
 
-    # Pass-through app_name-setter. Returns self so that the pass-through methods can be chained.
+    # Dual-use getter/setter. Without an argument, returns @app_name. With an argument, acts as
+    # pass-through @app_name-setter. Returns self so that the pass-through methods can be chained.
     # Note that the name of this application must be registered with Growl before it can be posted.
-    def app_name(name)
-      @app_name = name
-      self
+    def app_name(str = nil)
+      if str
+        @app_name = str
+        self
+      else
+        @app_name
+      end
     end
 
-    # Pass-through title-setter. Returns self so that the pass-through methods can be chained. Chaining
+    # Dual-use getter/setter. Without an argument, returns @title. With an argument, acts as
+    # pass-through @title-setter. Returns self so that the pass-through methods can be chained. Chaining
     # the methods just looks good somehow.
-    def title(title)
-      @title = title
-      self
+    def title(str = nil)
+      if str
+        @title = str
+        self
+      else
+        @title
+      end
     end
 
-    # Pass-through message-setter. Returns self so that the pass-through methods can be chained.        
-    def message(msg)
-      @message = msg
-      self
+    # Dual-use getter/setter. Without an argument, returns @message. With an argument, acts as
+    # pass-through @message-setter. Returns self so that the pass-through methods can be chained.        
+    def message(str = nil)
+      if str
+        @message = str
+        self
+      else
+        @message
+      end
     end
     
-    # Pass-through icon-setter. Takes a path to an image file and uses that as this notification's
+    # Dual-use getter/setter. Without an argument, returns @image. With an argument, acts as
+    # pass-through @icon-setter. Takes a path to an image file and uses that as this notification's
     # icon. Returns self so that the pass-through methods can be chained.
-    def image(path)
-      @image = transmogrify(:image, path)
-      self
+    def image(path = nil)
+      if path
+        @image = transmogrify(:image, path)
+        self
+      else
+        @image
+      end
     end
     
-    # Pass-through icon-setter. Takes a path to a file and uses that file's icon as this
+    # Dual-use getter/setter. Without an argument, returns @icon_path. With an argument, acts as
+    # pass-through @icon-setter. Takes a path to a file and uses that file's icon as this
     # notification's icon. Note that even if the file at the path you specify is an image, will use
     # that file's icon (e.g. the default .jpg icon) and not the file's contents (use image_path to 
     # use the file's contents). Returns self so that the pass-through methods can be chained.
-    def icon_path(path)
-      @icon_path = transmogrify(:icon_path, path)
-      self
+    def icon_path(path = nil)
+      if path
+        @icon_path = transmogrify(:icon_path, path)
+        self
+      else
+        @icon_path
+      end
     end
     
-    # Pass-through icon-setter. Takes a file type extension (such as "rb" or "torrent") and uses
+    # Dual-use getter/setter. Without an argument, returns @icon. With an argument, acts as
+    # pass-through @icon-setter. Takes a file type extension (such as "rb" or "torrent") and uses
     # the default system icon for that file type as this notification's icon. Returns self so that
     # the pass-through methods can be chained.
-    def file_type(type)
-      @icon = type
-      self
+    def file_type(type = nil)
+      if type
+        @icon = type
+        self
+      else
+        @icon
+      end
     end
     
-    # Pass-through icon-setter. Takes the name of an application (such as "Safari" or "Quicksilver")
+    # Dual-use getter/setter. Without an argument, returns @app_icon. With an argument, acts as
+    # pass-through @icon-setter. Takes the name of an application (such as "Safari" or "Quicksilver")
     # and uses that application's icon for this notification's icon. Returns self so that the pass-
     # through methods can be chained.
-    def app_icon(name)
-      @app_icon = transmogrify(:app_icon, name)
-      self
+    def app_icon(str = nil)
+      if str
+        @app_icon = transmogrify(:app_icon, str)
+        self
+      else
+        @app_icon
+      end
     end
     
-    # Pass-through sticky-setter. Returns self so that the pass-through methods can be chained.
-    def sticky(bool)
-      @sticky = bool
-      self
+    # Dual-use getter/setter. Without an argument, returns @sticky. With an argument, acts as
+    # pass-through @sticky-setter. Returns self so that the pass-through methods can be chained.
+    def sticky(bool = nil)
+      if bool
+        @sticky = bool
+        self
+      else
+        @sticky
+      end
     end
 
-    # Pass-through priority-setter. Returns self so that the pass-through methods can be chained.
+    # Dual-use getter/setter. Without an argument, returns @priority. With an argument, acts as
+    # pass-through @priority-setter. Returns self so that the pass-through methods can be chained.
     # Accepts either a priority name as a symbol (:very_low, :moderate, :normal, :high, or
     # :emergency) or an integer bewteen -2 and 2.
-    def priority(value)
-      @priority = get_priority_for(value)
-      self
+    def priority(value = nil)
+      if value
+        @priority = get_priority_for(value)
+        self
+      else
+        @priority
+      end
     end
   
     # Catch-all attribute reader. Used to prettify attribute reading by exposing the module's
@@ -190,14 +240,16 @@ module Growl
     # Pass a hash of override attributes to alter the notification being posted without changing
     # any attributes on the module.
     #
-    # Calls growlnotify using %x[], so returns STDOUT from the shell. If there are no glaring
-    # errors in syntax, usually returns "". However, a return value of "" is no guarantee that
-    # the message actually showed up on the screen. If notifications aren't showing up, read the
-    # notes about "things to be aware of" at the top and see if those fix the problem.
+    # Calls growlnotify using %x[], which returns STDOUT from the shell. If there are no glaring
+    # errors in syntax, this will be "". Therefore post returns true or false depending on whether
+    # the response from the shell was "" or not. However, this is no solid indication that anything
+    # got posted. If you're having trouble, make sure that @host is set to "localhost" (this is a bug
+    # in Leopard that may or may not be fixed.)
     #
     # Aliased as notify.
     def post(overrides = {})
-      %x[#{@path} #{self.build_message_string(overrides)}]
+      resp = %x[#{@path} #{self.build_message_string(overrides)}]
+      return resp == ""
     end
     alias :notify :post
 
@@ -212,8 +264,11 @@ module Growl
     # Sends the same message to each of the hosts specified.
     # Send hosts and passwords as arrays.
     # Example Growl.broadcast(["some.host", "pass"], ["some.other.host", "word"], ...)
+    #
+    # Returns true if all postings returned true, or false is one or more failed.
     def broadcast(*hosts)
-      hosts.each {|*host| self.post(:host => host[0], :password => host[1])}
+      resp = hosts.collect {|*host| self.post(:host => host[0], :password => host[1])}
+      return resp.all?
     end
     
     # Resets all attributes back to the defaults (mostly just nil). Used in testing.
@@ -239,17 +294,18 @@ module Growl
       @progress = nil
     end
 
-    protected
-
-    #
+    # Returns true if Growl is installed.
     def is_installed?
-      application_bridge.isGrowlInstalled
+      application_bridge.isGrowlInstalled == 1
     end
     
-    #
+    # Returns true if Growl is currently running. Using Growler while Growl isn't running
+    # usually causes a segementation fault.
     def is_running?
-      application_bridge.isGrowlRunning
+      application_bridge.isGrowlRunning == 1
     end
+
+    protected
 
     # Catch-all attribute setter, used internally. Massages data just like other
     # setters (for example, automatically appends ".app" to the name when setting
@@ -309,8 +365,6 @@ module Growl
     def setup!
       reset!
       load_framework!
-      raise GrowlIsNotInstalled unless Growl.is_installed?
-      raise GrowlIsNotRunning unless Growl.is_running?
     end
   end
   

@@ -41,7 +41,8 @@ module Growl
                   :priority => 0,
                   :message => "",
                   :title => ""}
-      self.set_attributes!(defaults.merge(attributes))
+      set_attributes!(defaults.merge(attributes))
+      return self
     end
 
     # The name of the Growl::Application that this notification belongs to.
@@ -60,13 +61,13 @@ module Growl
     
     # Sets attributes of a message from a hash. Used internally when initialize is called.
     # Can be used publically to set multiple attributes at a time.
-    def set_attributes!(attributes = {})
-      attributes.each do |key, value|
-        self[key] = value if ATTRIBUTES.include?(key)
-      end
-      @icon = extract_image_from(attributes)
-      return self
-    end
+    # def set_attributes!(attributes = {})
+    #   attributes.each do |key, value|
+    #     self[key] = value if ATTRIBUTES.include?(key)
+    #   end
+    #   @icon = extract_image_from(attributes)
+    #   return self
+    # end
     
     # Returns a hash of the attributes of the message.
     def get_attributes

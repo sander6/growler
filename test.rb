@@ -46,25 +46,70 @@ app = Growl.application do |growl|
   end
 end
 
+app["Test Notification Dos"].post
+
+# app = Growl::Application.new(:name => "TestGrowler", :app_icon => "Things")
+# Growl::Notification.new(app, :name => "Test 1", :title => "Test 1 Go!", :message => "Test 1 is Go!")
+# app["Test 1"].when_clicked do
+#   puts "Test 1 totally got clicked!"
+# end
+# 
+# app.set_as_delegate!
+# app.register!
+# 
+# app["Test 1"].post
+# app["Test 1"].post(:title => "Again! Again!")
+
+# app = Growl.application do
+#   name = "TestGrowler"
+#   app_icon = "Things"
+#   notification do
+#     name = "Test Notification Dos"
+#     title = "Test Two Go!"
+#     message = "Second test notification from Growl::Application!"
+#     when_clicked do
+#       puts "Test Notification Dos totally got clicked on, fool."
+#     end
+#     when_timed_out do
+#       puts "Test Notification Dos totally timed out. You weren't fast enough to save it."
+#     end
+#   end
+#   notification do
+#     name = "Test Notification Tres"
+#     title = "Test Three Go!"
+#     message = "Third test notification from Growl::Application! This one's sticky!"
+#     sticky = true
+#     app_icon = "iTunes"
+#   end
+#   notification do
+#     name = "Machine Gun Test"
+#     title = "Rat-tat-tat-tat! Rat-tat-tat Like That!"
+#     message = "Machine gun testing TestGrowler!"
+#     sticky = true
+#     when_clicked do
+#       puts "Dakka dakka!"
+#     end
+#   end
+# end
 
 
 # # note_two = app["Test Notification Dos"]
 # # note_two.post
 
-note_three = app["Test Notification Tres"]
-note_three.when_clicked do
-  puts "Test Notification Tres totally got clicked on, B."
-end
+# note_three = app["Test Notification Tres"]
+# note_three.when_clicked do
+#   puts "Test Notification Tres totally got clicked on, B."
+# end
+# 
+# note_three.post
+# puts
+# puts
+# 
+# note_three.post(:sticky => false)
+# note_three.post(:title => "Hooray!")
+# note_three.post(:message => "Not really working, eh?")
 
-note_three.post
-puts
-puts
-
-note_three.post(:sticky => false)
-note_three.post(:title => "Hooray!")
-note_three.post(:message => "Not really working, eh?")
-
-note_three.send(:build_notification_data).to_ruby.debug(:skip => "NotificationIcon")
+# note_three.send(:build_notification_data).to_ruby.debug(:skip => "NotificationIcon")
 
 # # app["Test Notification Dos"].post
 # # app["Test Notification Tres"].post
