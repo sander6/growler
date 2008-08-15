@@ -251,7 +251,7 @@ module Growl
       resp = %x[#{@path} #{self.build_message_string(overrides)}]
       return resp == ""
     end
-    alias :notify :post
+    alias_method :notify, :post
 
     # Just like post with automatic :sticky => true.
     #
@@ -259,7 +259,7 @@ module Growl
     def pin(overrides = {})
       post(overrides.merge(:sticky => true))
     end
-    alias :stick :pin 
+    alias_method :stick, :pin 
   
     # Sends the same message to each of the hosts specified.
     # Send hosts and passwords as arrays.

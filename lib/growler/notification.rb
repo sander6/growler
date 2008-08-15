@@ -8,7 +8,7 @@ module Growl
     ATTRIBUTES = [:name, :app_name, :title, :message, :icon, :sticky, :priority]
     ATTRIBUTES.each { |a| attr_accessor a }
     attr_reader :parent, :pid, :clicked_callback, :timed_out_callback
-    alias :sticky? :sticky
+    alias_method :sticky?, :sticky
    
     # Initializes a new Growl::Notification instance. Pass a Growl::Application object to act as
     # this notification's "parent" and/or a hash of attributes for this notifications. Will set
@@ -132,13 +132,13 @@ module Growl
     def post(overrides = {})
       Growl.application_bridge.notifyWithDictionary(build_notification_data(overrides))
     end
-    alias :notify :post
+    alias_method :notify, :post
 
     # Posts the message forcing :sticky => true.
     def pin(overrides = {})
       post(overrides.merge({:sticky => true}))
     end
-    alias :stick :pin
+    alias_method :stick, :pin
     
     # Registers a callback to run when this notification is clicked.
     # Pass a block of the desired behavior. For example:

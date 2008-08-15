@@ -47,7 +47,7 @@ module Growl
     REQUIRED_ATTRIBUTE_NAMES = [:name, :icon, :all_notifications, :default_notifications]
     attr_accessor :name, :ready_callback
     attr_reader :icon, :all_notifications, :default_notifications, :pid, :registered
-    alias :registered? :registered
+    alias_method :registered?, :registered
     
     # Creates a new Growl::Application instance.
     def initialize(attributes = {})
@@ -100,7 +100,7 @@ module Growl
       register! unless registered?
       @ready_callback.call if @ready_callback
     end
-    alias :growlIsReady :ready
+    alias_method :growlIsReady, :ready
 
     # Registers a callback to run when this application receives the GrowlIsReady event, in
     # addition to registering the application if it isn't already.
@@ -126,7 +126,7 @@ module Growl
       notification = get_notification_by_name(return_data)
       notification.clicked_callback.call if notification.has_callback?(:clicked)
     end
-    alias :growlNotificationWasClicked :clicked
+    alias_method :growlNotificationWasClicked, :clicked
 
     
     # When a notification times out, Growl will notify this application with the name of that 
@@ -138,7 +138,7 @@ module Growl
       notification = get_notification_by_name(return_data)
       notification.timed_out_callback.call if notification.has_callback?(:timed_out)
     end
-    alias :growlNotificationTimedOut :timed_out
+    alias_method :growlNotificationTimedOut, :timed_out
 
 
     # Allows message passing back to this program from OS X; the downside is that it completely
@@ -203,14 +203,14 @@ module Growl
       notification = get_notification_by_name(name)
       notification.post(overrides) if notification
     end
-    alias :notify :post
+    alias_method :notify, :post
 
     # Returns the notification with the given name from this application's all_notifications
     # list, or nil if it isn't found.
     def get_notification_by_name(notification_name)
       detect {|n| n.name == notification_name}
     end
-    alias :[] :get_notification_by_name
+    alias_method :[], :get_notification_by_name
     
     # Creates a new Growl::Notification instance, sets self to that instance's parent application
     # (which defines certain defaults for that notification, such as application name and icon),
@@ -244,7 +244,7 @@ module Growl
       end
       return @all_notifications
     end
-    alias :add_notification :add_notifications
+    alias_method :add_notification, :add_notifications
     
     # Removes the notification from this application's @all_notifications list. Also, naturally,
     # removes it from the @default_notifications. Returns the new @all_notifications list.
@@ -257,7 +257,7 @@ module Growl
       end
       return @all_notifications
     end
-    alias :remove_notification :remove_notifications
+    alias_method :remove_notification, :remove_notifications
     
     # Adds the notification to this application's @default_notifications. Returns the new
     # @default_notifications list.
@@ -272,7 +272,7 @@ module Growl
       end
       return @default_notifications
     end
-    alias :enable_notification :enable_notifications
+    alias_method :enable_notification, :enable_notifications
     
     # Removes the notification from this application's @default_notifications; the notification
     # remains in @all_notifications. Returns the new @default_notifications list.
@@ -284,7 +284,7 @@ module Growl
       end
       return @default_notifications
     end
-    alias :disable_notification :disable_notifications
+    alias_method :disable_notification, :disable_notifications
     
     # Checks to make sure all required attributes are not nil. If this method returns true, the application
     # has all the attributes it needs to be registered correctly.
@@ -307,7 +307,7 @@ module Growl
         "ApplicationIcon"      => @icon.TIFFRepresentation
       })
     end
-    alias :registrationDictionaryForGrowl :build_registration_dictionary
+    alias_method :registrationDictionaryForGrowl, :build_registration_dictionary
       
     private
 
