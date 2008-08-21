@@ -52,8 +52,7 @@ module Growl
     # Creates a new Growl::Application instance.
     def initialize(attributes = {})
       @application = OSX::NSApplication.sharedApplication
-      # @application.setDelegate(self)
-      @pid = OSX::NSProcessInfo.processInfo.processIdentifier
+      @pid = $$
       @all_notifications = []
       @default_notifications = []
       set_attributes!(attributes)
@@ -105,9 +104,9 @@ module Growl
     # Registers a callback to run when this application receives the GrowlIsReady event, in
     # addition to registering the application if it isn't already.
     # For example, to post a notification when ready:
-    # application.on_ready do
-    #   post("Ready")
-    # end
+    #   application.on_ready do
+    #     post("Ready")
+    #   end
     #
     # The GrowlIsReady event triggers if this application is running when Growl starts. However,
     # most of the time starting up Growler while Growl is off causes RubyCocoa to seg-fault.
@@ -133,7 +132,7 @@ module Growl
     # notification and pass it to the timed_out method. The application will search its
     # @all_notifications list for that notification and run its timed_out_callback.
     # Since callbacks are Notification-specific, you can have different behavior depending on
-    # what kind of notification was clicked.
+    # what kind of notification timed out.
     def timed_out(return_data)
       notification = get_notification_by_name(return_data)
       notification.timed_out_callback.call if notification.has_callback?(:timed_out)
@@ -147,6 +146,11 @@ module Growl
       OSX::NSApp.run
     end
     
+    # Stops the main loop that allows message-passing from this application to and from Growl.
+    # This method is added for completeness to stop an application after calling start! on it,
+    # but since start! locks this thread endlessly, this method is practically useless.
+    #
+    # If I find a way to unblock the NSApp.run loop, this method will start to mean something.
     def stop!
       OSX::NSApp.stop(nil)
     end

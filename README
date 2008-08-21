@@ -35,7 +35,7 @@ Or cloned from the git repository and installed from local source.
   $ rake gem
   $ gem install ./pkg/growler-[version].gem
 
---------------------------------------------------
+
 
 = Summary
 

@@ -368,9 +368,6 @@ module Growl
     end
   end
   
-  # Initialize the defaults.
-  self.setup!
-
   # Default error for anything that goes wrong with a Growl::Application.
   class GrowlApplicationError < StandardError
   end
@@ -397,3 +394,5 @@ module Growl
     end
   end
 end
+
+Growl.send :setup!

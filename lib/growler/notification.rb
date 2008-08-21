@@ -24,7 +24,7 @@ module Growl
       @parent = args[0]
       if @parent && @parent.is_a?(Growl::Application)
         default_app_name = @parent.name
-        @pid = @parent.pid if @parent.pid
+        @pid = @parent.pid || $$
       else
         default_app_name = "growlnotify"
       end
@@ -56,7 +56,7 @@ module Growl
     # Note that the setter analogue, []=, is protected and its use publically is not advised since
     # it doesn't perform data transformations like the traditional setter methods (attribute=) do.
     def [](attribute)
-      self.instance_variable_get :"@#{attribute}"
+      self.instance_variable_get("@#{attribute}")
     end
     
     # Sets attributes of a message from a hash. Used internally when initialize is called.
@@ -84,6 +84,7 @@ module Growl
     def name=(str)
       @name = str
       @title ||= @name
+      @name
     end
     
     # Takes a path to an image file and uses that as this notification's icon.
@@ -142,23 +143,25 @@ module Growl
     
     # Registers a callback to run when this notification is clicked.
     # Pass a block of the desired behavior. For example:
-    # notification.when_clicked do
-    #   puts "Hooray! I got clicked!"
-    # end
+    #   notification.when_clicked do
+    #     puts "Hooray! I got clicked!"
+    #   end
     def when_clicked(&block)
-      # @clicked_callback = Growl::Callback.new(self, &block)
       @clicked_callback = block
     end
     
     # Registered a callback to run when this notification times out.
     # Arguably less useful than when_clicked.
     def when_timed_out(&block)
-      # @timed_out_callback = Growl::Callback.new(self, &block)
       @timed_out_callback = block
     end
     
+    # Returns true if this notification has the specified type of callback.
+    # The only meaningful values are :clicked and :timed_out, but you could
+    # really pass anything you'd like (though those would probably return
+    # false).
     def has_callback?(context)
-      !!instance_variable_get(:"@#{context}_callback")
+      instance_variable_defined?("@#{context}_callback") 
     end
     
     private
@@ -190,7 +193,7 @@ module Growl
     # Catch-all attribute setter. Used internally; use the other setters to set attributes, since
     # those will transform inputs into the correct types.
     def []=(attribute, value)
-      self.instance_variable_set(:"@#{attribute}", value) 
+      self.instance_variable_set("@#{attribute}", value)
     end
   end
 end
