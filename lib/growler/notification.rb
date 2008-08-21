@@ -5,8 +5,11 @@ module Growl
     include Growl::ImageExtractor
     include Growl::PriorityExtractor
     
-    ATTRIBUTES = [:name, :app_name, :title, :message, :icon, :sticky, :priority]
-    ATTRIBUTES.each { |a| attr_accessor a }
+    WR_ATTRIBUTES = [:app_name, :title, :sticky]
+    RO_ATTRIBUTES = [:name, :message, :icon, :priority]
+    ATTRIBUTES = WR_ATTRIBUTES + RO_ATTRIBUTES
+    WR_ATTRIBUTES.each { |a| attr_accessor  a }
+    RO_ATTRIBUTES.each { |a| attr_reader    a }
     attr_reader :parent, :pid, :clicked_callback, :timed_out_callback
     alias_method :sticky?, :sticky
    
@@ -23,26 +26,21 @@ module Growl
       attributes = args.last.is_a?(Hash) ? args.pop : {}
       @parent = args[0]
       if @parent && @parent.is_a?(Growl::Application)
-        default_app_name = @parent.name
+        @app_name = @parent.name
         @pid = @parent.pid || $$
       else
-        default_app_name = "growlnotify"
+        @app_name = "growlnotify"
       end
-      default_name = "Command-Line Growl Notification"
+      @name = attributes[:name]
+      @title = attributes[:title] || @name
+      @sticky = attributes[:sticky] || false
+      @priority = get_priority_for(attributes[:priority] || 0)
       unless [:image_path, :icon_path, :file_type, :app_icon].any? {|k| attributes.has_key?(k)}
-        default_icon = @parent ? @parent.icon : nil
+        @icon = @parent ? @parent.icon : nil
       else
-        default_icon = nil
+        @icon = extract_image_from(attributes)
       end
-      defaults = {:app_name => default_app_name,
-                  :name => default_name,
-                  :image => default_icon,
-                  :sticky => false,
-                  :priority => 0,
-                  :message => "",
-                  :title => ""}
-      set_attributes!(defaults.merge(attributes))
-      return self
+      @message = Growl::Message.new(attributes[:message] || "")
     end
 
     # The name of the Growl::Application that this notification belongs to.
@@ -85,6 +83,19 @@ module Growl
       @name = str
       @title ||= @name
       @name
+    end
+    
+    # Setter for the message attribute. Creates a new Growl::Message instance with the given base string,
+    # starting capture pattern and ending capture pattern. For non-dynamic messages, you need only worry
+    # about passing a string to this method. Otherwise, read up about Growl::Messages to see how to make
+    # dynamic message templates.
+    def message=(base, start_pattern = nil, end_pattern = nil)
+      @message = Growl::Message.new(base, start_pattern, end_pattern)
+    end
+    
+    # Calls render on the message object. See Growl::Message for details.
+    def render(vars = {})
+      @message.render(vars)
     end
     
     # Takes a path to an image file and uses that as this notification's icon.
@@ -130,6 +141,9 @@ module Growl
     # having registered an application with that app_name having a (default) message of that name
     # will result in no message getting posted. This could possibly be useful to make one message
     # masquerade as if sent by a different program, should you ever want to.
+    #
+    # Other keys passed to overrides will be sent to the message to be dynamically rendered. See
+    # Growl::Message for details about this.
     def post(overrides = {})
       Growl.application_bridge.notifyWithDictionary(build_notification_data(overrides))
     end
@@ -170,9 +184,9 @@ module Growl
       tmp_name      = overrides[:name]                       || @name      || ""
       tmp_app_name  = overrides[:app_name]                   || @app_name  || ""
       tmp_title     = overrides[:title]                      || @title     || ""
-      tmp_message   = overrides[:message]                    || @message   || ""
       tmp_icon      = extract_image_from(overrides)          || @icon      || OSX::NSImage.alloc.init
       tmp_priority  = get_priority_for(overrides[:priority]) || @priority  || 0
+      tmp_message   = overrides[:message]                    || @message.render(overrides)   || ""
       # A more delicate idiom is required for boolean attributes, since || doesn't behave like it does above. 
       tmp_sticky = overrides[:sticky].nil? ? (@sticky.nil? ? false : @sticky) : overrides[:sticky]
 
