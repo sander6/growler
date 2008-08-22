@@ -63,7 +63,7 @@ module Growl
   BUNDLE_PATH = File.join(File.dirname(__FILE__), "..", "..", "ext", "Growl.framework")
   
   ATTR_NAMES = [:message, :title, :sticky, :icon, :password, :host, :name, :path, :app_name, :app_icon, :icon_path, :image, :priority, :udp, :auth, :crypt, :wait, :port, :progress]
-  ATTR_NAMES.each { |a| attr_accessor a }
+  ATTR_NAMES.each {|a| mattr_accessor a}
   
   class << self
     include Growl::PriorityExtractor

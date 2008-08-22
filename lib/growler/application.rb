@@ -50,13 +50,14 @@ module Growl
     alias_method :registered?, :registered
     
     # Creates a new Growl::Application instance.
-    def initialize(attributes = {})
+    # Note that since Growl::Applications inherit from NSObject, it has a janky initialize method
+    # that can't take any arguments. Therefore you'll have to create the object first and then
+    # set it's attributes with the attribute setters (easily done with Growl.application).
+    def initialize
       @application = OSX::NSApplication.sharedApplication
       @pid = $$
       @all_notifications = []
       @default_notifications = []
-      set_attributes!(attributes)
-      return self
     end
 
     # Registers this application with Growl (if it has all required attributes, as checked by registerable?).
@@ -83,15 +84,6 @@ module Growl
     def set_as_delegate!
       Growl.application_bridge.setGrowlDelegate(self)
     end
-
-    # --
-    # def observe!
-    #   nsdnc = OSX::NSDistributedNotificationCenter.defaultCenter
-    #   nsdnc.addObserver_selector_name_object(self, "ready:", nsdnc_identifier_for(:ready), nil)
-    #   nsdnc.addObserver_selector_name_object(self, "clicked:", nsdnc_identifier_for(:clicked), nil)
-    #   nsdnc.addObserver_selector_name_object(self, "timed_out:", nsdnc_identifier_for(:timed_out), nil)
-    # end
-    # ++
     
     # When (or if) this application receives the GrowlIsReady event, it will invoke this method
     # and register itself with Growl.
@@ -293,13 +285,7 @@ module Growl
     # Checks to make sure all required attributes are not nil. If this method returns true, the application
     # has all the attributes it needs to be registered correctly.
     def registerable?
-      # missing_attributes = REQUIRED_ATTRIBUTE_NAMES.any? do |name|
-      #   self.instance_variable_get(:"@#{name}").nil?
-      # end
-      # return !missing_attributes
-      
-      # See Object#to_proc for explanation of this crazy line here.
-      REQUIRED_ATTRIBUTE_NAMES.collect(&self).all?
+      REQUIRED_ATTRIBUTE_NAMES.collect { |name| self.send(name) }.all?
     end
     
     def build_registration_dictionary
@@ -317,14 +303,6 @@ module Growl
 
     def get_notification_from_return_data(return_data)
       get_notification_by_name(return_data.to_ruby)
-    end
-    
-    def nsdnc_identifier_for(context)
-      case context
-      when :ready then "#{@name}-#{@pid}-#{Growl::GROWL_IS_READY}"
-      when :clicked then "#{@name}-#{@pid}-#{Growl::GROWL_NOTIFICATION_CLICKED}"
-      when :timed_out then "#{@name}-#{@pid}-#{Growl::GROWL_NOTIFICATION_TIMED_OUT}"
-      end
     end
   end
 end

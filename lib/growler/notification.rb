@@ -40,7 +40,7 @@ module Growl
       else
         @icon = extract_image_from(attributes)
       end
-      @message = Growl::Message.new(attributes[:message] || "")
+      @message = DynamicString.new(attributes[:message] || "")
     end
 
     # The name of the Growl::Application that this notification belongs to.
@@ -57,16 +57,6 @@ module Growl
       self.instance_variable_get("@#{attribute}")
     end
     
-    # Sets attributes of a message from a hash. Used internally when initialize is called.
-    # Can be used publically to set multiple attributes at a time.
-    # def set_attributes!(attributes = {})
-    #   attributes.each do |key, value|
-    #     self[key] = value if ATTRIBUTES.include?(key)
-    #   end
-    #   @icon = extract_image_from(attributes)
-    #   return self
-    # end
-    
     # Returns a hash of the attributes of the message.
     def get_attributes
       attributes = {}
@@ -81,21 +71,21 @@ module Growl
     # descriptive names of notifications.
     def name=(str)
       @name = str
-      @title ||= @name
+      @title ||= DynamicString.new(@name)
       @name
     end
     
-    # Setter for the message attribute. Creates a new Growl::Message instance with the given base string,
-    # starting capture pattern and ending capture pattern. For non-dynamic messages, you need only worry
-    # about passing a string to this method. Otherwise, read up about Growl::Messages to see how to make
-    # dynamic message templates.
-    def message=(base, start_pattern = nil, end_pattern = nil)
-      @message = Growl::Message.new(base, start_pattern, end_pattern)
+    # Setter for the message attribute. Creates a new DynamicString instance with the given base string
+    # and capture pattern. For non-dynamic messages, you need only worry about passing a string to this method.
+    # Otherwise, read up about DynamicStrings to see how to make dynamic message templates.
+    def message=(*args)
+      @message = DynamicString.new(*args)
     end
     
-    # Calls render on the message object. See Growl::Message for details.
-    def render(vars = {})
-      @message.render(vars)
+    # Setter for the title. Creates a new DynamicString instance with the given base string and capture
+    # pattern. See DynamicString for details on how to use them.
+    def title=(*args)
+      @title = DynamicString.new(*args)
     end
     
     # Takes a path to an image file and uses that as this notification's icon.
@@ -134,16 +124,19 @@ module Growl
     # A hash of overrides can be passed to change the behavior of the output without changing the
     # object's attributes.
     #
-    # You can also pass a block to define this Notification's click callback behavior. However, doing
-    # so will overwrite any behavior you have already defined.
-    #
     # While you can theoretically override the message's app_name and name, doing so without first
     # having registered an application with that app_name having a (default) message of that name
     # will result in no message getting posted. This could possibly be useful to make one message
     # masquerade as if sent by a different program, should you ever want to.
     #
-    # Other keys passed to overrides will be sent to the message to be dynamically rendered. See
-    # Growl::Message for details about this.
+    # Other keys passed to overrides will be sent to the message and title to be dynamically rendered.
+    # See DynamicString for details about this. If both the title and message have a variable of the
+    # same name, passing that key will get interpolated into both strings. For (a bogus) example:
+    #   msg = Growl::Notification.new(:name => "Files Converted")
+    #   msg.title = "{number} Files Converted"
+    #   msg.message = "{number} files were successfully converted in {dir}."
+    #   ... (application registration and stuff) ...
+    #   msg.post(:number => 2, :dir => File.dirname(__FILE__))
     def post(overrides = {})
       Growl.application_bridge.notifyWithDictionary(build_notification_data(overrides))
     end
@@ -196,8 +189,7 @@ module Growl
               "NotificationDescription" => tmp_message,
               "NotificationIcon"        => tmp_icon.TIFFRepresentation,
               "NotificationSticky"      => OSX::NSNumber.numberWithBool_(tmp_sticky),
-              "NotificationPriority"    => OSX::NSNumber.numberWithInt_(get_priority_for(tmp_priority))}
-              
+              "NotificationPriority"    => OSX::NSNumber.numberWithInt_(get_priority_for(tmp_priority))}       
       data.merge!({"ApplicationPID" => @pid}) if @pid
       data.merge!({"NotificationClickContext" => @name}) if @clicked_callback
       data.merge!({"NotificationTimedOutContext" => @name}) if @timed_out_callback

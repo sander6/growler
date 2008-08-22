@@ -11,8 +11,7 @@ module Growl
   module ImageExtractor
     
     # This method is automatically called on the attributes hash passed when calling
-    # new or set_attributes! on Application or Notification objects. It looks for the
-    # following keys in order:
+    # new on Notification objects. It looks for the following keys in order:
     # - :image - an OSX::NSImage object of the icon you want
     # - :image_path - a path to an image file you want to use as the icon
     # - :icon_path - a path to any file whose icon you want to use
