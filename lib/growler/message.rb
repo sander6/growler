@@ -1,5 +1,6 @@
+require 'forwardable'
+
 module Growl
-  
   # A Growl::Message holds a base message string containing placeholder variables to be interpreted
   # when the message is rendered. For example:
   #   msg = Growl::Message.new("I'm feeling rather {emotion} today.")
@@ -9,22 +10,29 @@ module Growl
   # "{variable}" is just as good as "{ variable }". Everything between the curly braces will be
   # replaced with the value for the passed key.
   class Message
+    extend Forwardable
+
+    # Forward all String methods to @base.
+    (String.instance_methods - Object.instance_methods).each do |meth|
+      def_delegator :@base, :"#{meth}"
+    end
+  
     CLOSING_PAIRS = {"{" => "}", "[" => "]", "(" => ")"}
     @@default_capture_start = "{"
-    
+  
     # Getter for the default starting capture pattern (default is "{").
     def self.default_capture_start
       @@default_capture_start
     end
-    
+  
     # Setter for the default starting capture pattern.
     def self.default_capture_start=(pattern)
       @@default_capture_start = pattern
     end
-    
+  
     attr_reader :base, :capture_start, :capture_end, :captures
     alias_method :variables, :captures
-    
+  
     # Creates a new Message instance given a base string with placeholders demarcated by a start
     # and end pattern. The default pattern is "{placeholder}". Given a left-bracket of some sort,
     # i.e. {, [, or (, the end pattern will default to the closing right-bracket, otherwise, the
@@ -45,35 +53,61 @@ module Growl
       end
       @captures = capture_variable_names
     end
-    
+  
+    # Setter method for the base string. Automatically recaptures variables based on
+    # the existing starting and ending capture patterns.
+    # Note, however, that this does not redefine the capture pattern, so if you decide
+    # to change it, you'll have to reset the pattern or else there'll be no captures.
+    def base=(str)
+      @base = str
+      @captures = capture_variable_names
+      @base
+    end
+  
+    # Setter method for the starting capture pattern. Automatically pairs left brackets
+    # and recaptures variables.
+    def capture_start=(pattern, match_closing_pattern = true)
+      @capture_start = pattern
+      if match_closing_pattern
+        matched_pair = @capture_start.scan(/./).collect {|bit| CLOSING_PAIRS[bit]}.join
+        @capture_end = matched_pair == "" ? @capture_start : matched_pair
+      end
+      @captures = capture_variable_names
+      @capture_start
+    end
+  
+    # Setter method for the ending capture pattern. Automatically pairs rights brackets
+    # and recaptures variables.
+    def capture_end=(pattern, match_starting_pattern = true)
+      @capture_end = pattern
+      if match_starting_pattern
+        matched_pair = @capture_end.scan(/./).collect {|bit| CLOSING_PAIRS.invert[bit]}.join
+        @capture_start = matched_pair == "" ? @capture_end : matched_pair
+      end
+      @captures = capture_variable_names
+      @capture_end
+    end
+  
     # Returns the number of variables in this message.
     def arity
       @captures.size
     end
-    
+  
     # Interpolates the base string given a hash of variable names and values.
     def render(vars = {})
-      # unless vars.keys.all? {|key| @captures.include?(key)}
-      #   unknown_keys = vars.keys - @captures
-      #   raise Growl::MessageRenderingError, "Unknown argument#{"s" if unknown_keys.size != 1}: #{unknown_keys.join(", ")}"
-      # end
-      # unless vars.size == arity
-      #   adv = (vars.size <=> arity) == 1 ? "many" : "few"
-      #   raise Growl::MessageRenderingError, "The message you're trying to render was passed too #{adv} arguments."
-      # end
       rendered_string = @base.dup
       @captures.each do |var|
         rendered_string.gsub!(capture_expression(var), vars[var]) if vars.has_key?(var) 
       end
       rendered_string
     end
-    
+  
     private
-    
+  
     def capture_variable_names
       @base.scan(capture_expression("([\\w\\d_]+)")).flatten.collect {|var| var.to_sym}
     end
-    
+  
     def capture_expression(middle_bit = ".*")
       %r{#{escape(@capture_start)}\s*#{middle_bit}\s*#{escape(@capture_end)}}
     end
@@ -83,7 +117,4 @@ module Growl
     end
 
   end
-  
-  # class MessageRenderingError < StandardError
-  # end
 end
