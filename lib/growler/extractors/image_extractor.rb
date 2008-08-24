@@ -1,5 +1,3 @@
-require 'osx/cocoa'
-
 module Growl
   
   # ImageExtractor helps take the hash of attributes passed when creating

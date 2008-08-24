@@ -1,5 +1,3 @@
-require 'osx/cocoa'
-
 module Growl
 
   # A Growl::Application instance holds information about your program (the one you're using Growler
@@ -41,11 +39,11 @@ module Growl
   # Growl::Application also includes the Enumerable module to iterate over notifications.
   class Application < OSX::NSObject
     include Growl::ImageExtractor
-    # include Growl::ObjectExtensions
+    include Growl::Network::Application
     include Enumerable
 
     REQUIRED_ATTRIBUTE_NAMES = [:name, :icon, :all_notifications, :default_notifications]
-    attr_accessor :name, :ready_callback
+    attr_accessor :name, :ready_callback, :remote_host, :password
     attr_reader :icon, :all_notifications, :default_notifications, :pid, :registered
     alias_method :registered?, :registered
     
@@ -58,6 +56,8 @@ module Growl
       @pid = $$
       @all_notifications = []
       @default_notifications = []
+      @remote_host = nil
+      @password = nil
     end
 
     # Registers this application with Growl (if it has all required attributes, as checked by registerable?).
@@ -78,6 +78,12 @@ module Growl
     def register!
       Growl.application_bridge.registerWithDictionary(build_registration_dictionary) if registerable?
       @registered = registerable?
+    end
+    
+    def register_with_remote!(host = @remote_host, password = @password)
+      @socket = UDPSocket.open
+      @socket.connect host, Growl::UDP_PORT
+      send_data! build_registration_packet(password)
     end
     
     # Sets this application as a GrowlApplicationBridgeDelegate, allowing it to communicate with Growl.
@@ -200,6 +206,12 @@ module Growl
       notification.post(overrides) if notification
     end
     alias_method :notify, :post
+    
+    def post_to_remote(name, host = @host, password = @password, overrides = {})
+      notification = get_notification_by_name(name)
+      notification.post_to_remote(host, password, overrides) if notification
+    end
+    alias_method :notify_to_remote, :post
 
     # Returns the notification with the given name from this application's all_notifications
     # list, or nil if it isn't found.
