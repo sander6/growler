@@ -20,7 +20,7 @@ class DynamicString < String
     @@default_capture_pattern = pattern
   end
 
-  attr_reader :capture_start, :capture_end, :captures
+  attr_reader :capture_start, :capture_end, :captures, :defaults
 
   # Creates a new Message instance given a base string with placeholders demarcated by a start
   # and end pattern. The default pattern is "{...}". You can define this to be whatever you like
@@ -30,15 +30,26 @@ class DynamicString < String
   # a good idea to use letters or numbers in the capture pattern (that is, "BEGIN...END" might
   # cause some weirdness to arise.)
   #
+  # You can pass a hash of default values for each placeholder when you're initializing the
+  # dynamic string. Pass placeholder names as Symbols.
+  #
   # Some examples:
-  #   msg = DynamicString.new("The time is now {time}.")
+  #   msg = DynamicString.new("The time is {time}.", :time => Time.now)
   #   msg = DynamicString.new("The date is currently [date].", "[...]")
-  #   msg = DynamicString.new("Growler is totally :adjective:.", ":...:")
-  def initialize(base_str = "", pattern = nil)
-    cap_pattern = pattern || @@default_capture_pattern
+  #   msg = DynamicString.new("Growler is totally :adjective:.", ":...:", :adjective => "awesome")
+  def initialize(*args)
+    @defaults = args.last.is_a?(Hash) ? args.pop : {}
+    base_str = args[0] || ""
+    pattern = args[1] || @@default_capture_pattern
     super(base_str)
-    @capture_start, @capture_end = parse_capture_pattern(cap_pattern)
+    @capture_start, @capture_end = parse_capture_pattern(pattern)
     @captures = capture_variable_names
+  end
+  
+  def capture_pattern=(pattern)
+    @capture_start, @capture_end = parse_capture_pattern(pattern)
+    @captures = capture_variable_names
+    return self
   end
   
   # Returns the number of variables in this message.
@@ -47,14 +58,14 @@ class DynamicString < String
   end
 
   # Interpolates the base string given a hash of variable names and values.
-  def to_s(vars = {})
+  def render(vars = {})
+    vars = @defaults.merge vars
     rendered_string = dup
     @captures.each do |var|
       rendered_string.gsub!(capture_expression(var), vars[var].to_s) if vars.has_key?(var) 
     end
     rendered_string
   end
-  alias_method :render, :to_s
 
   private
 

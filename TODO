@@ -7,3 +7,7 @@ TODO:
 2. Get this on RubyForge
   - figure out what the problem with pushing to RubyForge is.
   - downplay all the stuff where you say you can install this with 'gem'.
+  
+3. Review all the code
+  - fix the stupid bugs (like that stupid Growl attr_accessor bug).
+  - Change the documentation wherever it refers to old features.

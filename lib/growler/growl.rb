@@ -63,7 +63,7 @@ module Growl
   BUNDLE_PATH = File.join(File.dirname(__FILE__), "..", "..", "ext", "Growl.framework")
   
   ATTR_NAMES = [:message, :title, :sticky, :icon, :password, :host, :name, :path, :app_name, :app_icon, :icon_path, :image, :priority, :udp, :auth, :crypt, :wait, :port, :progress]
-  ATTR_NAMES.each {|a| mattr_accessor a}
+  mattr_accessor *ATTR_NAMES
   
   class << self
     include Growl::PriorityExtractor
@@ -115,24 +115,42 @@ module Growl
     # Dual-use getter/setter. Without an argument, returns @title. With an argument, acts as
     # pass-through @title-setter. Returns self so that the pass-through methods can be chained. Chaining
     # the methods just looks good somehow.
-    def title(str = nil)
-      if str
-        @title = str
+    def title(*args)
+      if args
+        @title = DynamicString.new(*args)
         self
       else
         @title
       end
     end
+    
+    # Title setter. Creates a new DynamicString for the title based on the string you pass. However,
+    # given the vagaries of Ruby's setter= methods, you can't pass any other options on the
+    # DynamicString at the same time (like defaults or a special capture pattern). You can get around
+    # this by explicitly saying
+    #   Growl.title = DynamicString.new("Some {adj} string!", :adj => "crazy")
+    def title=(str)
+      @title = str.is_a?(DynamicString) ? str : DynamicString.new(str)
+    end
 
     # Dual-use getter/setter. Without an argument, returns @message. With an argument, acts as
     # pass-through @message-setter. Returns self so that the pass-through methods can be chained.        
-    def message(str = nil)
-      if str
-        @message = str
+    def message(*args)
+      if args
+        @message = DynamicString.new(*args)
         self
       else
         @message
       end
+    end
+    
+    # Message setter. Creates a new DynamicString for the message based on the string you pass. However,
+    # given the vagaries of Ruby's setter= methods, you can't pass any other options on the
+    # DynamicString at the same time (like defaults or a special capture pattern). You can get around 
+    # this by explicitly saying
+    #   Growl.title = DynamicString.new("Some {adj} string!", :adj => "crazy")
+    def message=(str)
+      @message = str.is_a?(DynamicString) ? str : DynamicString.new(str)
     end
     
     # Dual-use getter/setter. Without an argument, returns @image. With an argument, acts as
@@ -147,6 +165,10 @@ module Growl
       end
     end
     
+    def image=(path)
+      @image = transmogrify(:image, path)
+    end
+    
     # Dual-use getter/setter. Without an argument, returns @icon_path. With an argument, acts as
     # pass-through @icon-setter. Takes a path to a file and uses that file's icon as this
     # notification's icon. Note that even if the file at the path you specify is an image, will use
@@ -159,6 +181,10 @@ module Growl
       else
         @icon_path
       end
+    end
+    
+    def icon_path(path)
+      @icon_path = transmogrify(:icon_path, path)
     end
     
     # Dual-use getter/setter. Without an argument, returns @icon. With an argument, acts as
@@ -187,6 +213,10 @@ module Growl
       end
     end
     
+    def app_icon=(str)
+      @app_icon = transmogrify(:app_icon, str)
+    end
+    
     # Dual-use getter/setter. Without an argument, returns @sticky. With an argument, acts as
     # pass-through @sticky-setter. Returns self so that the pass-through methods can be chained.
     def sticky(bool = nil)
@@ -209,6 +239,10 @@ module Growl
       else
         @priority
       end
+    end
+    
+    def priority=(value)
+      @priority = get_priority_for(value)
     end
   
     # Catch-all attribute reader. Used to prettify attribute reading by exposing the module's
@@ -273,8 +307,8 @@ module Growl
     
     # Resets all attributes back to the defaults (mostly just nil). Used in testing.
     def reset!
-      @message = ""
-      @title = ""
+      @message = DynamicString.new("")
+      @title = DynamicString.new("")
       @sticky = false
       @icon = nil
       @password = nil
@@ -342,14 +376,22 @@ module Growl
       str << "-w"                            if options[:wait]
       str << "-n '#{options[:app_name]}'"    if options[:app_name]
       str << "-d '#{options[:name]}'"        if options[:name]
-      str << "-m '#{options[:message]}'"
+      if options[:message].is_a? DynamicString
+        str << "-m '#{options[:message].render(options)}'"
+      elsif options[:message].is_a? String
+        str << "-m '#{options[:message]}'"
+      end
       str << "-i '#{options[:icon]}'"        if options[:icon]
       str << "-I '#{options[:icon_path]}'"   if options[:icon_path]
       str << "--image '#{options[:image]}'"  if options[:image]
       str << "-a '#{options[:app_icon]}'"    if options[:app_icon]
       str << "-p #{options[:priority]}"      if options[:priority]
       str << "-H #{options[:host]}"          if options[:host]
-      str << "-t '#{options[:title]}'"       if options[:title]
+      if options[:title].is_a? DynamicString
+        str << "-t '#{options[:title].render(options)}'"
+      elsif options[:title].is_a? String
+        str << "-t '#{options[:title]}'"
+      end
       str.join(" ")
     end
     
@@ -378,9 +420,6 @@ module Growl
   
   # Error raised when Growl isn't installed.
   class GrowlIsNotInstalled < StandardError
-    def message
-      "Growl is not installed, rendering the whole point of the Growler gem rather silly."
-    end
   end
   
   # Error raised when Growl is not currently running. In the process of creating a new application
@@ -389,9 +428,6 @@ module Growl
   # is already running anyway. In short, your program should crash horribly before you'll ever see
   # this error.
   class GrowlIsNotRunning < StandardError
-    def message
-      "Growl is not running. Please start Growl before using the Growler gem."
-    end
   end
 end
 
