@@ -1,11 +1,12 @@
 require 'rubygems'
 Gem::manage_gems
 require 'rake/gempackagetask'
+require 'lib/growler/version'
 
 spec = Gem::Specification.new do |s|
     s.platform          =   Gem::Platform::RUBY
     s.name              =   "growler"
-    s.version           =   "0.2.0"
+    s.version           =   Growl.version
     s.author            =   "Sander Hartlage"
     s.email             =   "sander6 at rubyforge dot org"
     s.homepage          =   "http://growler.rubyforge.org/"

@@ -1,4 +1,3 @@
-
 module Growl
 
   # An alternate definition for the Growl::Application class for non-OSX machines. Functionality

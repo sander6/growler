@@ -16,10 +16,9 @@ module Growl
     # the following defaults if you don't specify them:
     # * :app_name - name of the application passed as the parent, or "growlnotify"
     # * :name - "Command-Line Growl Notification"
-    # * :image - icon of parent application, unless :image_path, :icon_path, :file_type, or :app_icon was also passed
     # * :sticky - false
-    # * :message - ""
-    # * :title - ""
+    # * :message - DynamicString.new("")
+    # * :title - DynamicString.new("")
     def initialize(*args)
       attributes = args.last.is_a?(Hash) ? args.pop : {}
       @parent = args[0]
@@ -90,7 +89,9 @@ module Growl
       @priority = get_priority_for(value)
     end
     
-    # Posts the message.
+    # Posts the message to the specified host (either as the first argument or as the :to or
+    # :host hash keys).
+    # 
     # A hash of overrides can be passed to change the behavior of the output without changing the
     # object's attributes.
     #
@@ -107,20 +108,18 @@ module Growl
     #   msg.message = "{number} files were successfully converted in {dir}."
     #   ... (application registration and stuff) ...
     #   msg.post(:number => 2, :dir => File.dirname(__FILE__))
-    def post(*args)
-      options = args.last.is_a?(Hash) ? args.pop : {}
-      tmp_host = args[0] || options[:to] || options[:host] || @host
-      tmp_password = args[1] || options[:password] || @password
+    def post(host = @host, password = @password, options = {})
+      tmp_host = options[:to] || options[:host] || host
+      tmp_password = options[:password] || password
       @socket = UDPSocket.open
       @socket.connect tmp_host, Growl::UDP_PORT
       send_data! build_notification_packet(tmp_password, options)
     end
     alias_method :notify, :post
 
-    # Posts the message forcing :sticky => true.
-    def pin(*args)
-      args << args.last.is_a?(Hash) ? args.pop.merge({:sticky => true}) : {:sticky => true}
-      post(*args)
+    # Posts the message to the specified host forcing :sticky => true.
+    def pin(host = @host, password = @password, options = {})
+      post(host, password, options.merge({:sticky => true}))
     end
     alias_method :stick, :pin
     

@@ -143,6 +143,9 @@ module Growl
     end
     alias_method :notify, :post
     
+    # Posts this message to the supplied remote host, or the default @remote_host. You can
+    # either pass the hostname and password as the first and second arguments, or stick them
+    # into the overrides hash as :host, :remote_host, and/or :password.
     def post_to_remote(host = @remote_host, password = @password, overrides = {})
       tmp_host = options[:host] || options[:remote_host] || host
       tmp_password = options[:password] || password
@@ -158,6 +161,7 @@ module Growl
     end
     alias_method :stick, :pin
     
+    # Posts the message to the supplied (or default) remote_host with :sticky => true.
     def pin_to_remote(host = @remote_host, password = @password, overrides = {})
       post_to_remote(host, password, overrides.merge({:sticky => true}))
     end
@@ -188,6 +192,11 @@ module Growl
     
     private
 
+    # Builds the notification hash to send to Growl so that it knows how to post the notification
+    # (actually, Growl doesn't keep track of a notification's message body, title, stickiness, 
+    # priority, etc., and needs to be send this information each time a notification is posted. 
+    # It's Growler that's helping you keep track of all that so you don't have to tediously type
+    # out messages and titles each time.).
     def build_notification_data(overrides = {})
       tmp_name      = overrides[:name]                       || @name      || ""
       tmp_app_name  = overrides[:app_name]                   || @app_name  || ""

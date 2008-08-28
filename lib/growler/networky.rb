@@ -47,19 +47,28 @@ module Growl
       @socket.flush
     end
     
+    # Builds an MD5 checksum given the supplied data and an optional password.
     def build_checksum(data, password = nil)
       checksum = MD5.new data
       checksum.update password unless password.nil?
       return checksum.digest
     end
     
+    # I'll admit that I don't know what this does, since it was adapted (i.e. ripped off)
+    # of Eric Hodels' Ruby-Growl. Even he admits that it might not be necessary, but I'm
+    # certainly not qualified to make any judgments about that.
     def set_send_buffer(length)
       @socket.setsockopt(Socket::SOL_SOCKET, Socket::SO_SNDBUF, length)
     end
 
   end
   
+  # The Network module provides network functionality to Applications and Notifications.
   module Network
+    
+    # The Network::Application module gives Growl::Applications the ability to register
+    # themselves remotely to other hosts. It is included in both flavors of the Application
+    # class (both OSXy and non-OSXy).
     module Application
 
       # Ensures that the class this module is included in also gets the DataSender module.      
@@ -69,6 +78,9 @@ module Growl
         
       private
     
+      # Arduously builds the packet for remote application registration. The host you're
+      # sending to must have "Allow remote application registration" checked in the Growl
+      # preference pane.
       def build_registration_packet(password = nil)
         length = 0
         data = []
@@ -106,6 +118,8 @@ module Growl
       end
     end
   
+    # The Growl::Network::Notification module allows Notifications (of both the OSXy and non-OSXy
+    # types) to post remotely.
     module Notification
 
       # Ensures that the class this module is included in also gets the DataSender module.
@@ -115,6 +129,9 @@ module Growl
   
       private
   
+      # Arduously builds the packet to remotely post a notification through Growl. The host you're
+      # posting to must have "Listen for incoming notifications" checked in it's Growl preference
+      # pane.
       def build_notification_packet(*args)
         overrides = args.last.is_a?(Hash) ? args.pop : {}
         password = args[0]

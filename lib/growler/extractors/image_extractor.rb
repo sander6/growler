@@ -1,7 +1,7 @@
 module Growl
   
   # ImageExtractor helps take the hash of attributes passed when creating
-  # a Growl::Application or Growl::Notification and locating the proper image as an
+  # a Growl::Application or Growl::Notification and locate the proper image as an
   # OSX::NSImage object. This allows one to say something like
   #   Growl::Notification.new(:app_icon => "Mail")
   # and be confident that ImageExtractor will go and do the right thing; that is,

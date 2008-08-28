@@ -73,40 +73,40 @@ module Growl
       end
     end
 
-    # Dual-use getter/setter. Without an argument, returns @name. With an argument, acts as
-    # pass-through @name-setter. Returns self so that the pass-through methods can be chained.
+    # Dual-use getter/setter. Without an argument, returns @@name. With an argument, acts as
+    # pass-through @@name-setter. Returns self so that the pass-through methods can be chained.
     # Note that the name of this notification must be registered with Growl before it can
     # be posted.
     def name(str = nil)
       if str
-        @name = str
+        @@name = str
         self
       else
-        @name
+        @@name
       end
     end
 
-    # Dual-use getter/setter. Without an argument, returns @app_name. With an argument, acts as
-    # pass-through @app_name-setter. Returns self so that the pass-through methods can be chained.
+    # Dual-use getter/setter. Without an argument, returns @@app_name. With an argument, acts as
+    # pass-through @@app_name-setter. Returns self so that the pass-through methods can be chained.
     # Note that the name of this application must be registered with Growl before it can be posted.
     def app_name(str = nil)
       if str
-        @app_name = str
+        @@app_name = str
         self
       else
-        @app_name
+        @@app_name
       end
     end
 
-    # Dual-use getter/setter. Without an argument, returns @title. With an argument, acts as
-    # pass-through @title-setter. Returns self so that the pass-through methods can be chained. Chaining
+    # Dual-use getter/setter. Without an argument, returns @@title. With an argument, acts as
+    # pass-through @@title-setter. Returns self so that the pass-through methods can be chained. Chaining
     # the methods just looks good somehow.
     def title(*args)
       if args
-        @title = DynamicString.new(*args)
+        @@title = DynamicString.new(*args)
         self
       else
-        @title
+        @@title
       end
     end
     
@@ -116,17 +116,17 @@ module Growl
     # this by explicitly saying
     #   Growl.title = DynamicString.new("Some {adj} string!", :adj => "crazy")
     def title=(str)
-      @title = str.is_a?(DynamicString) ? str : DynamicString.new(str)
+      @@title = str.is_a?(DynamicString) ? str : DynamicString.new(str)
     end
 
-    # Dual-use getter/setter. Without an argument, returns @message. With an argument, acts as
-    # pass-through @message-setter. Returns self so that the pass-through methods can be chained.        
+    # Dual-use getter/setter. Without an argument, returns @@message. With an argument, acts as
+    # pass-through @@message-setter. Returns self so that the pass-through methods can be chained.        
     def message(*args)
       if args
-        @message = DynamicString.new(*args)
+        @@message = DynamicString.new(*args)
         self
       else
-        @message
+        @@message
       end
     end
     
@@ -136,105 +136,105 @@ module Growl
     # this by explicitly saying
     #   Growl.title = DynamicString.new("Some {adj} string!", :adj => "crazy")
     def message=(str)
-      @message = str.is_a?(DynamicString) ? str : DynamicString.new(str)
+      @@message = str.is_a?(DynamicString) ? str : DynamicString.new(str)
     end
     
-    # Dual-use getter/setter. Without an argument, returns @image. With an argument, acts as
-    # pass-through @icon-setter. Takes a path to an image file and uses that as this notification's
+    # Dual-use getter/setter. Without an argument, returns @@image. With an argument, acts as
+    # pass-through @@icon-setter. Takes a path to an image file and uses that as this notification's
     # icon. Returns self so that the pass-through methods can be chained.
     def image(path = nil)
       if path
-        @image = transmogrify(:image, path)
+        @@image = transmogrify(:image, path)
         self
       else
-        @image
+        @@image
       end
     end
     
     def image=(path)
-      @image = transmogrify(:image, path)
+      @@image = transmogrify(:image, path)
     end
     
-    # Dual-use getter/setter. Without an argument, returns @icon_path. With an argument, acts as
-    # pass-through @icon-setter. Takes a path to a file and uses that file's icon as this
+    # Dual-use getter/setter. Without an argument, returns @@icon_path. With an argument, acts as
+    # pass-through @@icon-setter. Takes a path to a file and uses that file's icon as this
     # notification's icon. Note that even if the file at the path you specify is an image, will use
     # that file's icon (e.g. the default .jpg icon) and not the file's contents (use image_path to 
     # use the file's contents). Returns self so that the pass-through methods can be chained.
     def icon_path(path = nil)
       if path
-        @icon_path = transmogrify(:icon_path, path)
+        @@icon_path = transmogrify(:icon_path, path)
         self
       else
-        @icon_path
+        @@icon_path
       end
     end
     
     def icon_path(path)
-      @icon_path = transmogrify(:icon_path, path)
+      @@icon_path = transmogrify(:icon_path, path)
     end
     
-    # Dual-use getter/setter. Without an argument, returns @icon. With an argument, acts as
-    # pass-through @icon-setter. Takes a file type extension (such as "rb" or "torrent") and uses
+    # Dual-use getter/setter. Without an argument, returns @@icon. With an argument, acts as
+    # pass-through @@icon-setter. Takes a file type extension (such as "rb" or "torrent") and uses
     # the default system icon for that file type as this notification's icon. Returns self so that
     # the pass-through methods can be chained.
     def file_type(type = nil)
       if type
-        @icon = type
+        @@icon = type
         self
       else
-        @icon
+        @@icon
       end
     end
     
-    # Dual-use getter/setter. Without an argument, returns @app_icon. With an argument, acts as
-    # pass-through @icon-setter. Takes the name of an application (such as "Safari" or "Quicksilver")
+    # Dual-use getter/setter. Without an argument, returns @@app_icon. With an argument, acts as
+    # pass-through @@icon-setter. Takes the name of an application (such as "Safari" or "Quicksilver")
     # and uses that application's icon for this notification's icon. Returns self so that the pass-
     # through methods can be chained.
     def app_icon(str = nil)
       if str
-        @app_icon = transmogrify(:app_icon, str)
+        @@app_icon = transmogrify(:app_icon, str)
         self
       else
-        @app_icon
+        @@app_icon
       end
     end
     
     def app_icon=(str)
-      @app_icon = transmogrify(:app_icon, str)
+      @@app_icon = transmogrify(:app_icon, str)
     end
     
-    # Dual-use getter/setter. Without an argument, returns @sticky. With an argument, acts as
-    # pass-through @sticky-setter. Returns self so that the pass-through methods can be chained.
+    # Dual-use getter/setter. Without an argument, returns @@sticky. With an argument, acts as
+    # pass-through @@sticky-setter. Returns self so that the pass-through methods can be chained.
     def sticky(bool = nil)
       if bool
-        @sticky = bool
+        @@sticky = bool
         self
       else
-        @sticky
+        @@sticky
       end
     end
 
-    # Dual-use getter/setter. Without an argument, returns @priority. With an argument, acts as
-    # pass-through @priority-setter. Returns self so that the pass-through methods can be chained.
+    # Dual-use getter/setter. Without an argument, returns @@priority. With an argument, acts as
+    # pass-through @@priority-setter. Returns self so that the pass-through methods can be chained.
     # Accepts either a priority name as a symbol (:very_low, :moderate, :normal, :high, or
     # :emergency) or an integer bewteen -2 and 2.
     def priority(value = nil)
       if value
-        @priority = get_priority_for(value)
+        @@priority = get_priority_for(value)
         self
       else
-        @priority
+        @@priority
       end
     end
     
     def priority=(value)
-      @priority = get_priority_for(value)
+      @@priority = get_priority_for(value)
     end
   
     # Catch-all attribute reader. Used to prettify attribute reading by exposing the module's
     # attributes as if they were a hash.
     def [](attribute)
-      self.instance_variable_get :"@#{attribute}"
+      self.instance_variable_get :"@@#{attribute}"
     end
   
     # Returns a hash of the current settings.
@@ -263,12 +263,12 @@ module Growl
     # Calls growlnotify using %x[], which returns STDOUT from the shell. If there are no glaring
     # errors in syntax, this will be "". Therefore post returns true or false depending on whether
     # the response from the shell was "" or not. However, this is no solid indication that anything
-    # got posted. If you're having trouble, make sure that @host is set to "localhost" (this is a bug
+    # got posted. If you're having trouble, make sure that @@host is set to "localhost" (this is a bug
     # in Leopard that may or may not be fixed.)
     #
     # Aliased as notify.
     def post(overrides = {})
-      resp = %x[#{@path} #{self.build_message_string(overrides)}]
+      resp = %x[#{@@path} #{self.build_message_string(overrides)}]
       return resp == ""
     end
     alias_method :notify, :post
@@ -293,25 +293,25 @@ module Growl
     
     # Resets all attributes back to the defaults (mostly just nil). Used in testing.
     def reset!
-      @message = DynamicString.new("")
-      @title = DynamicString.new("")
-      @sticky = false
-      @icon = nil
-      @password = nil
-      @host = "localhost"
-      @name = "Command-Line Growl Notification"
-      @path = "/usr/local/bin/growlnotify"
-      @app_name = "growlnotify"
-      @app_icon = nil
-      @icon_path = nil
-      @image = nil
-      @priority = 0
-      @udp = nil
-      @auth = nil
-      @crypt = nil
-      @wait = nil
-      @port = nil
-      @progress = nil
+      @@message = DynamicString.new("")
+      @@title = DynamicString.new("")
+      @@sticky = false
+      @@icon = nil
+      @@password = nil
+      @@host = "localhost"
+      @@name = "Command-Line Growl Notification"
+      @@path = "/usr/local/bin/growlnotify"
+      @@app_name = "growlnotify"
+      @@app_icon = nil
+      @@icon_path = nil
+      @@image = nil
+      @@priority = 0
+      @@udp = Growl::UDP_PORT
+      @@auth = nil
+      @@crypt = nil
+      @@wait = nil
+      @@port = nil
+      @@progress = nil
     end
 
     protected
@@ -321,7 +321,7 @@ module Growl
     # Growl.app_icon).
     def []=(attribute, value)
       if ATTR_NAMES.include?(attribute)
-        self.instance_variable_set(:"@#{attribute}", transmogrify(attribute, value)) 
+        self.instance_variable_set(:"@@#{attribute}", transmogrify(attribute, value)) 
       end
     end
 
@@ -370,6 +370,8 @@ module Growl
       str.join(" ")
     end
     
+    # Initializes the modules variables to their defaults and loads the Growl.framework
+    # if applicable.
     def setup!
       reset!
       load_framework! if Growl::COCOA

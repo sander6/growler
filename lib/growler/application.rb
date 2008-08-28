@@ -199,7 +199,7 @@ module Growl
       @icon = image_from_app_icon(name)
     end
     
-    # Searches this applications all-notifications list for a notification of the given
+    # Searches this application's all_notifications list for a notification of the given
     # name and posts it. You can pass a hash of overrides that get sent to the post method.
     def post(name, overrides = {})
       notification = get_notification_by_name(name)
@@ -207,7 +207,11 @@ module Growl
     end
     alias_method :notify, :post
     
-    def post_to_remote(name, host = @host, password = @password, overrides = {})
+    # Searches this application's all_notifications list for a notification of the given
+    # name and posts it remotely to the supplied host, or to the default remote_host. You
+    # can pass a hash of overrides that get send to the post method; you can also set the
+    # host and password with override keys :host and :password.
+    def post_to_remote(name, host = @remote_host, password = @password, overrides = {})
       notification = get_notification_by_name(name)
       notification.post_to_remote(host, password, overrides) if notification
     end
@@ -300,6 +304,7 @@ module Growl
       REQUIRED_ATTRIBUTE_NAMES.collect { |name| self.send(name) }.all?
     end
     
+    # Creates the registration dictionary to send to Growl for this application to get registered.
     def build_registration_dictionary
       OSX::NSDictionary.dictionaryWithDictionary({
         "ApplicationName"      => @name,
@@ -313,6 +318,8 @@ module Growl
       
     private
 
+    # When this application receives a signal from Growl that a message was clicked or timed out,
+    # this method searches for that notification in this application's all_notifications list.
     def get_notification_from_return_data(return_data)
       get_notification_by_name(return_data.to_ruby)
     end

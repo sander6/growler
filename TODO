@@ -11,3 +11,7 @@ TODO:
 3. Review all the code
   - fix the stupid bugs (like that stupid Growl attr_accessor bug).
   - Change the documentation wherever it refers to old features.
+  
+4. Complete features
+  - figure out what :udp, :auth, :crypt, :port, :progress and :wait options do
+    for growlnotify.

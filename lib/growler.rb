@@ -12,15 +12,15 @@ $LOAD_PATH.unshift(File.dirname(__FILE__))
 # for the Mac-only Growl framework, but we can still try to eek out some network functionality
 # on non-Mac platforms.
 
-require 'growler/errors'
-require 'growler/defines' # Here's where Growl::COCOA is defined.
-require 'growler/framework' if Growl::COCOA
 require 'growler/helpers/object_extensions'
 require 'growler/helpers/module_extensions'
 require 'growler/helpers/hash_extensions'
+require 'growler/dynamic_string'
+require 'growler/errors'
+require 'growler/defines' # Here's where Growl::COCOA is defined.
+require 'growler/framework' if Growl::COCOA
 require 'growler/extractors/image_extractor' if Growl::COCOA
 require 'growler/extractors/priority_extractor'
-require 'growler/dynamic_string'
 require 'growler/growl'
 require 'growler/networky'
 require Growl::COCOA ? 'growler/application' : 'growler/non_osx_application'
