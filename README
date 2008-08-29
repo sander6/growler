@@ -6,9 +6,9 @@ Growler is a Ruby utility for posting notifications and registering applications
 
 Growler is compatible with Growl versions >= 1.1.2; versions as old as 0.6 might work, but haven't been tested.
 
-Growler can obviously only post notifications on Mac OS X platforms (>=10.4). Network functionality is planned to allow notifications to be sent FROM non-Mac platforms, but the end host must obviously be running Mac OS X and have Growl installed.
+Growler can work in two ways: on OSX machines, it can register applications and post notifications both locally and remotely. On non-OSX machines, it can create applications and notifications to be registered and posted remotely (to a Mac with Growl, of course). When Growler is required, it checks your RUBY_PLATFORM and loads either the Mac-specific libraries or the other libraries.
 
-Growler requires RubyCocoa version >= 0.13.1. RubyCocoa 0.13.1 is included with Leopard.
+For the Mac version, Growler requires RubyCocoa version >= 0.13.1. RubyCocoa 0.13.1 is included with Leopard.
 
 If your system is pre-Leopard, you'll have to install RubyCocoa. There seems to be no gem for it, but if you have MacPorts, RubyCocoa can be installed with simply
 
@@ -18,6 +18,8 @@ Alternately, binaries and source code are available from the RubyCocoa SourceFor
 
 RubyCocoa has its own set of requirements to build and use. Read about them at the RubyCocoa project page http://rubycocoa.sourceforge.net/GettingStarted.
 
+For the non-Mac version, there aren't any specific requirements. Growl away.
+
 == License
 
 Growler is released under the Ruby License. See the included LICENSE file for details.
@@ -26,7 +28,7 @@ Growler is released under the Ruby License. See the included LICENSE file for de
 
 Growler can be installed via RubyGems.
 
-  $ sudo gem install growler
+  $ sudo gem install sander6-growler --source=http://gems.github.com
   
 Or cloned from the git repository and installed from local source.
 
