@@ -34,10 +34,7 @@ Or cloned from the git repository and installed from local source.
 
   $ git clone git://github.com/sander6/growler.git
   $ cd growler
-  $ rake gem
-  $ gem install ./pkg/growler-[version].gem
-
-
+  $ rake install
 
 = Summary
 
@@ -48,6 +45,8 @@ To use Growler, require the gem
 Growler can be used in one of two ways:
 1. to send simple notifications, or
 2. to register a full application with the Growl framework and send messages through that.
+
+If you are on a Mac, you can send notifications and register applications either locally or remotely to another Mac with Growl installed. If you are not on a Mac, you can (obviously) only send notifications and register applications to remote Macs. In either case, the remote host must have "Listen for incoming notifications" and "Allow remote application registration" checked in the Growl preference pane for network notifications and registration to work.
 
 === Simple notifications
 
@@ -148,3 +147,13 @@ When calling post on a notification, you can pass a hash of overrides that will 
 Growl::Applications are NSObjects and conform to the GrowlApplicationBridgeDelegate protocol. Unlike other Growl libraries that bother the NSDistributedNotificationCenter each time they want to talk to Growl, Growler actually loads the Growl Framework, imports it into Ruby across the RubyCocoa bridge, and sets Growl::Applications up as delegates of the GrowlApplicationBridge. This cuts out a fair bit of longwinded Objective C methods as well as gives access to some of the methods of the GrowlApplicationBridge, such as methods to tell whether Growl is running or not.
 
 You can get at the bridge by calling Growl.application_bridge. If you want to see what it can do, you can unpack this gem and find a copy of the Growl framework in the ext directory, inside which is GrowlApplicationBridge.h that will tell you everything you need to know.
+
+=== Bugs and other gripes
+
+Currently, if you are on a Mac, Growler assumes you have Growl installed and running when you attempt to use it. If you don't, there tend to be segmentation faults all over the place.
+
+Currently, both the OSXy and non-OSXy flavors of Growl::Application and Growl::Notification are merged together in the RDocs. Either set of files get loaded depending on the RUBY_PLATFORM. This will get fixed once I change the class names and make the appropriate switch statements in the other libraries that depend on them.
+
+Concerning click and timeout callbacks, while these _technically_ work just fine, they are only accessible while an OSX::NSApp.run loop is going on (i.e. while OSX is paying attention). This has the unfortunate side-effect of locking the entire thread. Attempts to spawn a new thread to handle this have failed due to RubyCocoa's wanky handling of both Ruby and Cocoa threads. I should think that if you used Growler in a full RubyCocoa application, where NSApp.run loops are flying around all over the place, you should be fine and have all the callbacks you can handle. For plain ol' Ruby scripts and applications, however, callbacks are currently a no-go.
+
+I have no idea how to get meaningful information back from Growl in order to test things like whether the notifications got posted correctly with the correct message and so on. Testing so far has been a real try-it-and-see process.

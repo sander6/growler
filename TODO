@@ -15,3 +15,11 @@ TODO:
 4. Complete features
   - figure out what :udp, :auth, :crypt, :port, :progress and :wait options do
     for growlnotify.
+
+5. Accommodate people on Macs that don't have Growl installed
+  - check for this when checking for the platform.
+  - if Growl isn't installed, fail spectacularly!
+
+6. Fix the RDocs
+  - both the OSXy and non-OSXy Application and Notification classes are merged on the same page.
+  - fix this transparently so that Growler works the same on all platforms.
