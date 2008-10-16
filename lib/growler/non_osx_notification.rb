@@ -1,5 +1,5 @@
 module Growl
-  class Notification
+  class NonOSXNotification
     include Growl::PriorityExtractor
     include Growl::Network::Notification
     

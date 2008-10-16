@@ -23,6 +23,15 @@ require 'growler/extractors/image_extractor' if Growl::COCOA
 require 'growler/extractors/priority_extractor'
 require 'growler/growl'
 require 'growler/networky'
-require Growl::COCOA ? 'growler/application' : 'growler/non_osx_application'
-require Growl::COCOA ? 'growler/notification' : 'growler/non_osx_notification'
+if Growl::COCOA
+  require 'growler/application'
+  require 'growler/notification'
+else
+  require 'growler/non_osx_application'
+  require 'growler/non_osx_notification'
+  Growl::Application = Growl::NonOSXApplication
+  Growl::Notification = Growl::NonOSXNotification
+end
+# require Growl::COCOA ? 'growler/application' : 'growler/non_osx_application'
+# require Growl::COCOA ? 'growler/notification' : 'growler/non_osx_notification'
 require 'growler/version'

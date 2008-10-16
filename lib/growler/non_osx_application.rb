@@ -7,7 +7,7 @@ module Growl
   # The main differences between a Cocoa-powered Growl::Application and this kind are that setting
   # icons and pids do nothing, it can't be set as a GrowlApplicationBridgeDelegate, and there are no
   # callbacks.
-  class Application
+  class NonOSXApplication
     include Growl::Network::Application
     include Enumerable
 
