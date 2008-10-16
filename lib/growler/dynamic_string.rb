@@ -126,7 +126,7 @@ class DynamicString < String
   #   parse_capture_pattern("<%...%>") # => "<%", "%>"
   def parse_capture_pattern(pattern)
     pattern = @@default_capture_pattern unless pattern =~ /\.{3}/
-    patterns = pattern.scan(/(\S+)\s*\.{3}s*(\S+)/).flatten
+    patterns = pattern.scan(/(\S+)\s*\.{3}\s*(\S+)/).flatten
     return *patterns
   end
   
