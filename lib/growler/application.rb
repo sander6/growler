@@ -92,18 +92,20 @@ module Growl
     end
     
     # When (or if) this application receives the GrowlIsReady event, it will invoke this method
-    # and register itself with Growl.
+    # and register itself with Growl. If the application has a @ready_callback, will call it
+    # yielding self.
     def ready(return_data)
       register! unless registered?
-      @ready_callback.call if @ready_callback
+      @ready_callback.call(self) if @ready_callback
     end
     alias_method :growlIsReady, :ready
 
     # Registers a callback to run when this application receives the GrowlIsReady event, in
-    # addition to registering the application if it isn't already.
+    # addition to registering the application if it isn't already. Yields itself to the Proc
+    # when called.
     # For example, to post a notification when ready:
-    #   application.on_ready do
-    #     post("Ready")
+    #   application.on_ready do |app|
+    #     app.post("Ready")
     #   end
     #
     # The GrowlIsReady event triggers if this application is running when Growl starts. However,
@@ -121,10 +123,9 @@ module Growl
     # what kind of notification was clicked.
     def clicked(return_data)
       notification = get_notification_by_name(return_data)
-      notification.clicked_callback.call if notification.has_callback?(:clicked)
+      notification.clicked_callback.call(self, notification) if notification.has_callback?(:clicked)
     end
     alias_method :growlNotificationWasClicked, :clicked
-
     
     # When a notification times out, Growl will notify this application with the name of that 
     # notification and pass it to the timed_out method. The application will search its
@@ -133,7 +134,7 @@ module Growl
     # what kind of notification timed out.
     def timed_out(return_data)
       notification = get_notification_by_name(return_data)
-      notification.timed_out_callback.call if notification.has_callback?(:timed_out)
+      notification.timed_out_callback.call(self, notification) if notification.has_callback?(:timed_out)
     end
     alias_method :growlNotificationTimedOut, :timed_out
 

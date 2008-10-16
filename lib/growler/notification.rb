@@ -168,15 +168,24 @@ module Growl
     alias_method :stick_to_remote, :pin_to_remote
     
     # Registers a callback to run when this notification is clicked.
-    # Pass a block of the desired behavior. For example:
-    #   notification.when_clicked do
+    # Pass a block of the desired behavior. This notification's application
+    # and the notification itself will be yielded to the Proc when called.
+    # For example:
+    #   notification.when_clicked do |application, notification|
     #     puts "Hooray! I got clicked!"
+    #   end
+    # Or, one actually using the yielded objects:
+    #   notification.when_clicked do |application, notification|
+    #     application["Something Got Clicked"].post(:clicked_notification => notification.name)
     #   end
     def when_clicked(&block)
       @clicked_callback = block
     end
     
     # Registered a callback to run when this notification times out.
+    # Pass a block of the desired behavior. This notification's application
+    # and the notification itself will be yielded to the Proc when called.
+    # 
     # Arguably less useful than when_clicked.
     def when_timed_out(&block)
       @timed_out_callback = block
